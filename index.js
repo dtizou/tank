@@ -9,16 +9,18 @@ app.get('/', function(req, res){
 var x = 0;
 var y = 0;
 
+//var users = {};
+
 io.on('connection', function(socket){
   io.emit('draw', [x, y]);
-  console.log('connected');
+  console.log('connected ' + socket.id);
   socket.on('moveLeft', function(){
     x -= 10;
     if (x <= 0) {
       x = 0;
     }
     io.emit('draw', [x, y]);
-    console.log('moveLeft');
+    console.log('moveLeft ' + socket.id);
   });
   socket.on('moveRight', function(){
     x += 10;
@@ -26,7 +28,7 @@ io.on('connection', function(socket){
       x = 1150;
     }
     io.emit('draw', [x, y]);
-    console.log('moveRight');
+    console.log('moveRight ' + socket.id);
   });
   socket.on('moveUp', function(){
     y -= 10;
@@ -34,7 +36,7 @@ io.on('connection', function(socket){
       y = 0;
     }
     io.emit('draw', [x, y]);
-    console.log('moveUp');
+    console.log('moveUp ' + socket.id);
   });
   socket.on('moveDown', function(){
     y += 10;
@@ -42,7 +44,7 @@ io.on('connection', function(socket){
       y = 650;
     }
     io.emit('draw', [x, y]);
-    console.log('moveDown');
+    console.log('moveDown ' + socket.id);
   });
 });
 
