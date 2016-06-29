@@ -27,12 +27,16 @@
                 break;
         }
       }, false);
-      socket.on('draw', function(coords) {
+      socket.on('draw', function(users) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.beginPath();
-        ctx.rect(coords[0], coords[1], 50, 50);
-        ctx.fillStyle = "#FF0000";
-        ctx.fill();
+        for (var user in users) {
+          if (users.hasOwnProperty(user)) {
+            ctx.rect(users[user].x, users[user].y, users[user].width, users[user].height);
+            ctx.fillStyle = users[user].color;
+            ctx.fill();
+          }
+        }
         ctx.closePath();
       });
       /*addEventListener('keyup', function (e) {
