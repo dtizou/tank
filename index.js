@@ -6,9 +6,31 @@ app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
+var x = 0;
+var y = 0;
+
 io.on('connection', function(socket){
-  socket.on('chat message', function(msg){
-    io.emit('chat message', msg);
+  io.emit('draw', [x, y]);
+  console.log('connected');
+  socket.on('moveLeft', function(){
+    x -= 10;
+    io.emit('draw', [x, y]);
+    console.log('moveLeft');
+  });
+  socket.on('moveRight', function(){
+    x += 10;
+    io.emit('draw', [x, y]);
+    console.log('moveRight');
+  });
+  socket.on('moveUp', function(){
+    y -= 10;
+    io.emit('draw', [x, y]);
+    console.log('moveUp');
+  });
+  socket.on('moveDown', function(){
+    y += 10;
+    io.emit('draw', [x, y]);
+    console.log('moveDown');
   });
 });
 
