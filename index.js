@@ -9,53 +9,60 @@ app.get('/', function(req, res){
 
 var users = {};
 
-function draw() {
-  io.emit('draw', users, maze.generateMaze(4, 5));
+function drawTanks() {
+  io.emit('drawTanks', users);
+}
+
+function drawMaze() {
+  io.emit('drawMaze', maze.generateMaze(4, 5));
 }
 
 io.on('connection', function(socket){
+  //Things to do when connection to socket starts
   users[socket.id] = {x: 0, y: 0, width: 50, height: 50, color: '#ff0000'};
-  draw();
-  console.log('connected ' + socket.id);
+  drawMaze();
+  drawTanks();
+  //console.log(socket.id);
+  
+  //Receiving events
   socket.on('moveLeft', function(){
     users[socket.id].x -= 10;
     if (users[socket.id].x <= 0) {
       users[socket.id].x = 0;
     }
-    draw();
-    console.log('moveLeft ' + socket.id);
+    drawTanks();
   });
   socket.on('moveRight', function(){
     users[socket.id].x += 10;
     if (users[socket.id].x >= 1150) {
       users[socket.id].x = 1150;
     }
-    draw();
-    console.log('moveRight ' + socket.id);
+    drawTanks();
   });
   socket.on('moveUp', function(){
     users[socket.id].y -= 10;
     if (users[socket.id].y <= 0) {
       users[socket.id].y = 0;
     }
-    draw();
-    console.log('moveUp ' + socket.id);
+    drawTanks();
   });
   socket.on('moveDown', function(){
     users[socket.id].y += 10;
     if (users[socket.id].y >= 650) {
       users[socket.id].y = 650;
     }
-    draw();
-    console.log('moveDown ' + socket.id);
+    drawTanks();
   });
+  
+  //Remove tank on disconnect
   socket.on('disconnect', function(){
     delete users[socket.id];
-    draw();
+    drawTanks();
   })
-  socket.on('addUser', function(user){
+  
+  /*socket.on('addUser', function(user){
     console.log(user);
-  });
+  });*/
 });
 
 http.listen(3000, function(){

@@ -2,17 +2,30 @@
 <html>
   <head>
     <title>Tank game</title>
+    <style>
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+    </style>
   </head>
-  <div id="username" style="position:absolute; top:50%; left:50%">
+  <!--<div id="username" style="position:absolute; top:50%; left:50%">
       <input autocomplete="off" /><button>Username</button>
-  </div>
-  <canvas id="canvas" width="1200" height="700"></canvas>
+  </div>-->
+  <canvas id="mazeCanvas" width="1200" height="700" style="z-index: 0"></canvas>
+  <canvas id="tankCanvas" width="1200" height="700" style="z-index: 1"></canvas>
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
-      var canvas = document.getElementById('canvas');
-      var ctx = canvas.getContext('2d');
+      //Basic variables defined
       var socket = io();
+      var mazeCanvas = document.getElementById('mazeCanvas');
+      var tankCanvas = document.getElementById('tankCanvas');
+      var mazeCtx = mazeCanvas.getContext('2d');
+      var tankCtx = tankCanvas.getContext('2d');
+
+      //Send key events to server
       addEventListener('keydown', function (e) {
         switch (e.keyCode) {
           case 37:
@@ -29,48 +42,57 @@
                 break;
         }
       }, false);
-      socket.on('draw', function(users, maze) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.beginPath();
+
+      //Redraws the new tank positions
+      socket.on('drawTanks', function(users) {
+        tankCtx.clearRect(0, 0, tankCanvas.width, tankCanvas.height);
+        tankCtx.beginPath();
         for (var user in users) {
           if (users.hasOwnProperty(user)) {
-            ctx.rect(users[user].x, users[user].y, users[user].width, users[user].height);
-            ctx.fillStyle = users[user].color;
-            ctx.fill();
+            tankCtx.rect(users[user].x, users[user].y, users[user].width, users[user].height);
+            tankCtx.fillStyle = users[user].color;
+            tankCtx.fill();
           }
         }
-        var rows = 4, cols = 5;
-        for (var i = 0; i < rows; i++) {
-          for (var j = 0; j < cols; j++) {
-            if (maze[i][j].left) {
-              ctx.moveTo(canvas.width * i / rows, canvas.height * j / cols);
-              ctx.lineTo(canvas.width * i / rows, canvas.height * (j+1) / cols);
-            }
-            if (maze[i][j].right) {
-              ctx.moveTo(canvas.width * (i+1) / rows, canvas.height * j / cols);
-              ctx.lineTo(canvas.width * (i+1) / rows, canvas.height * (j+1) / cols);
-            }
-            if (maze[i][j].top) {
-              ctx.moveTo(canvas.width * i / rows, canvas.height * j / cols);
-              ctx.lineTo(canvas.width * (i+1) / rows, canvas.height * j / cols);
-            }
-            if (maze[i][j].bottom) {
-              ctx.moveTo(canvas.width * i / rows, canvas.height * (j+1) / cols);
-              ctx.lineTo(canvas.width * (i+1) / rows, canvas.height * (j+1) / cols);
-            }
-          }
-        }
-        ctx.stroke();
-        ctx.closePath();
+        tankCtx.closePath();
       });
+
+      //Draws the maze
+      socket.on('drawMaze', function(maze) {
+        mazeCtx.beginPath();
+        for (var i = 0; i < maze.rows; i++) {
+          for (var j = 0; j < maze.cols; j++) {
+            if (maze.maze[i][j].left) {
+              mazeCtx.moveTo(mazeCanvas.width * i / maze.rows, mazeCanvas.height * j / maze.cols);
+              mazeCtx.lineTo(mazeCanvas.width * i / maze.rows, mazeCanvas.height * (j+1) / maze.cols);
+            }
+            if (maze.maze[i][j].right) {
+              mazeCtx.moveTo(mazeCanvas.width * (i+1) / maze.rows, mazeCanvas.height * j / maze.cols);
+              mazeCtx.lineTo(mazeCanvas.width * (i+1) / maze.rows, mazeCanvas.height * (j+1) / maze.cols);
+            }
+            if (maze.maze[i][j].top) {
+              mazeCtx.moveTo(mazeCanvas.width * i / maze.rows, mazeCanvas.height * j / maze.cols);
+              mazeCtx.lineTo(mazeCanvas.width * (i+1) / maze.rows, mazeCanvas.height * j / maze.cols);
+            }
+            if (maze.maze[i][j].bottom) {
+              mazeCtx.moveTo(mazeCanvas.width * i / maze.rows, mazeCanvas.height * (j+1) / maze.cols);
+              mazeCtx.lineTo(mazeCanvas.width * (i+1) / maze.rows, mazeCanvas.height * (j+1) / maze.cols);
+            }
+          }
+        }
+        mazeCtx.stroke();
+        mazeCtx.closePath();
+      });
+
+      //To use later
       /*addEventListener('keyup', function (e) {
         socket.emit('keyup', e.keyCode);
       }, false);*/
-      var submit = $("#username button");
+      /*var submit = $("#username button");
       submit.on('click', function() {
           $("#username").hide();
           socket.emit("addUser", $("#username input").val());
-      });
+      });*/
     </script>
   </body>
 </html>

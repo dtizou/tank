@@ -22,6 +22,6 @@ module.exports = {
 			}
 		}
 
-		return maze;
+		return {maze: maze, rows: rows, cols: cols};
 	}
 };
