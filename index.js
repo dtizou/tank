@@ -47,6 +47,9 @@ io.on('connection', function(socket){
   socket.on('disconnect', function(){
     delete users[socket.id];
   })
+  socket.on('addUser', function(user){
+    console.log(user);
+  });
 });
 
 http.listen(3000, function(){

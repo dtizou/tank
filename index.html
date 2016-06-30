@@ -3,8 +3,10 @@
   <head>
     <title>Tank game</title>
   </head>
-  <body>
-    <canvas id="canvas" width="1200" height="700"></canvas>
+  <div id="username" style="position:absolute; top:50%; left:50%">
+      <input autocomplete="off" /><button>Username</button>
+  </div>
+  <canvas id="canvas" width="1200" height="700"></canvas>
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
@@ -42,6 +44,11 @@
       /*addEventListener('keyup', function (e) {
         socket.emit('keyup', e.keyCode);
       }, false);*/
+      var submit = $("#username button");
+      submit.on('click', function() {
+          $("#username").hide();
+          socket.emit("addUser", $("#username input").val());
+      });
     </script>
   </body>
 </html>
