@@ -1,12 +1,15 @@
 var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+var mazeGenerator = require('./maze');
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
 var users = {};
+
+var maze = mazeGenerator.generateMaze(3,3);
 
 io.on('connection', function(socket){
   users[socket.id] = {x: 0, y: 0, width: 50, height: 50, color: '#ff0000'};
