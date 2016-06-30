@@ -13,13 +13,14 @@
   <!--<div id="username" style="position:absolute; top:50%; left:50%">
       <input autocomplete="off" /><button>Username</button>
   </div>-->
-  <canvas id="mazeCanvas" width="1200" height="700" style="z-index: 0"></canvas>
-  <canvas id="tankCanvas" width="1200" height="700" style="z-index: 1"></canvas>
+  <canvas id="mazeCanvas" style="z-index: 0"></canvas>
+  <canvas id="tankCanvas" style="z-index: 1"></canvas>
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
       //Basic variables defined
       var socket = io();
+      var canvasWidth, canvasHeight;
       var mazeCanvas = document.getElementById('mazeCanvas');
       var tankCanvas = document.getElementById('tankCanvas');
       var mazeCtx = mazeCanvas.getContext('2d');
@@ -43,6 +44,15 @@
         }
       }, false);
 
+      socket.on('setCanvasSize', function(canvasSize) {
+        canvasWidth = canvasSize[1];
+        canvasHeight = canvasSize[0];
+        mazeCanvas.width = canvasWidth;
+        mazeCanvas.height = canvasHeight;
+        tankCanvas.width = canvasWidth;
+        tankCanvas.height = canvasHeight;
+      });
+
       //Redraws the new tank positions
       socket.on('drawTanks', function(users) {
         tankCtx.clearRect(0, 0, tankCanvas.width, tankCanvas.height);
@@ -60,9 +70,10 @@
       //Draws the maze
       socket.on('drawMaze', function(maze) {
         mazeCtx.beginPath();
+        mazeCtx.lineWidth = 2;
         for (var i = 0; i < maze.rows; i++) {
           for (var j = 0; j < maze.cols; j++) {
-            if (maze.maze[i][j].left) {
+            if (maze.maze[i][j].left && j == 0) {
               mazeCtx.moveTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * i / maze.rows);
               mazeCtx.lineTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * (i+1) / maze.rows);
             }
@@ -70,7 +81,7 @@
               mazeCtx.moveTo(mazeCanvas.width * (j+1) / maze.cols, mazeCanvas.height * i / maze.rows);
               mazeCtx.lineTo(mazeCanvas.width * (j+1) / maze.cols, mazeCanvas.height * (i+1) / maze.rows);
             }
-            if (maze.maze[i][j].top) {
+            if (maze.maze[i][j].top && i == 0) {
               mazeCtx.moveTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * i / maze.rows);
               mazeCtx.lineTo(mazeCanvas.width * (j+1) / maze.cols, mazeCanvas.height * i / maze.rows);
             }
