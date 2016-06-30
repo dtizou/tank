@@ -14,7 +14,7 @@ function drawTanks() {
 }
 
 function drawMaze() {
-  io.emit('drawMaze', maze.generateMaze(4, 5));
+  io.emit('drawMaze', maze.generateMaze(7, 12));
 }
 
 io.on('connection', function(socket){

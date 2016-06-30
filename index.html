@@ -63,20 +63,20 @@
         for (var i = 0; i < maze.rows; i++) {
           for (var j = 0; j < maze.cols; j++) {
             if (maze.maze[i][j].left) {
-              mazeCtx.moveTo(mazeCanvas.width * i / maze.rows, mazeCanvas.height * j / maze.cols);
-              mazeCtx.lineTo(mazeCanvas.width * i / maze.rows, mazeCanvas.height * (j+1) / maze.cols);
+              mazeCtx.moveTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * i / maze.rows);
+              mazeCtx.lineTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * (i+1) / maze.rows);
             }
             if (maze.maze[i][j].right) {
-              mazeCtx.moveTo(mazeCanvas.width * (i+1) / maze.rows, mazeCanvas.height * j / maze.cols);
-              mazeCtx.lineTo(mazeCanvas.width * (i+1) / maze.rows, mazeCanvas.height * (j+1) / maze.cols);
+              mazeCtx.moveTo(mazeCanvas.width * (j+1) / maze.cols, mazeCanvas.height * i / maze.rows);
+              mazeCtx.lineTo(mazeCanvas.width * (j+1) / maze.cols, mazeCanvas.height * (i+1) / maze.rows);
             }
             if (maze.maze[i][j].top) {
-              mazeCtx.moveTo(mazeCanvas.width * i / maze.rows, mazeCanvas.height * j / maze.cols);
-              mazeCtx.lineTo(mazeCanvas.width * (i+1) / maze.rows, mazeCanvas.height * j / maze.cols);
+              mazeCtx.moveTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * i / maze.rows);
+              mazeCtx.lineTo(mazeCanvas.width * (j+1) / maze.cols, mazeCanvas.height * i / maze.rows);
             }
             if (maze.maze[i][j].bottom) {
-              mazeCtx.moveTo(mazeCanvas.width * i / maze.rows, mazeCanvas.height * (j+1) / maze.cols);
-              mazeCtx.lineTo(mazeCanvas.width * (i+1) / maze.rows, mazeCanvas.height * (j+1) / maze.cols);
+              mazeCtx.moveTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * (i+1) / maze.rows);
+              mazeCtx.lineTo(mazeCanvas.width * (j+1) / maze.cols, mazeCanvas.height * (i+1) / maze.rows);
             }
           }
         }
