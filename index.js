@@ -11,7 +11,28 @@ var users = {};
 var canvasSize = [700, 1200]; //height and width
 var mazeDimensions = [7, 12]; //rows and cols
 var maze = mazeGen.generateMaze(mazeDimensions[0], mazeDimensions[1]);
-var speed = 10;
+var speed = 3;
+
+setInterval(updateTanks, 25);
+
+function updateTanks() {
+  for (var user in users) {
+    if (users[user].left) {
+      users[user].x -= speed;
+    }
+    if (users[user].right) {
+      users[user].x += speed;
+    }
+    if (users[user].up) {
+      users[user].y -= speed;
+    }
+    if (users[user].down) {
+      users[user].y += speed;
+    }
+    fixCollision(user);
+  }
+  drawTanks();
+}
 
 function drawTanks() {
   io.emit('drawTanks', users);
@@ -43,32 +64,40 @@ function fixCollision(socketid) {
 
 io.on('connection', function(socket){
   //Things to do when connection to socket starts
-  users[socket.id] = {x: 0, y: 0, width: 50, height: 50, color: '#ff0000'};
+  users[socket.id] = {x: 0, y: 0, width: 50, height: 50, color: '#ff0000', left: false, right: false, up: false, down: false};
   setCanvasSize();
   drawMaze();
   drawTanks();
   //console.log(socket.id);
   
   //Receiving events
-  socket.on('moveLeft', function(){
-    users[socket.id].x -= speed;
-    fixCollision(socket.id);
-    drawTanks();
+  socket.on('pressLeft', function(){
+    users[socket.id].left = true;
+    users[socket.id].right = false;
   });
-  socket.on('moveRight', function(){
-    users[socket.id].x += speed;
-    fixCollision(socket.id);
-    drawTanks();
+  socket.on('pressRight', function(){
+    users[socket.id].right = true;
+    users[socket.id].left = false;
   });
-  socket.on('moveUp', function(){
-    users[socket.id].y -= speed;
-    fixCollision(socket.id);
-    drawTanks();
+  socket.on('pressUp', function(){
+    users[socket.id].up = true;
+    users[socket.id].down = false;
   });
-  socket.on('moveDown', function(){
-    users[socket.id].y += speed;
-    fixCollision(socket.id);
-    drawTanks();
+  socket.on('pressDown', function(){
+    users[socket.id].down = true;
+    users[socket.id].up = false;
+  });
+  socket.on('releaseLeft', function(){
+    users[socket.id].left = false;
+  });
+  socket.on('releaseRight', function(){
+    users[socket.id].right = false;
+  });
+  socket.on('releaseUp', function(){
+    users[socket.id].up = false;
+  });
+  socket.on('releaseDown', function(){
+    users[socket.id].down = false;
   });
   
   //Remove tank on disconnect

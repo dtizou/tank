@@ -30,17 +30,34 @@
       addEventListener('keydown', function (e) {
         switch (e.keyCode) {
           case 37:
-                socket.emit('moveLeft');
+                socket.emit('pressLeft');
                 break;
           case 38:
-                socket.emit('moveUp');
+                socket.emit('pressUp');
                 break;
           case 39:
-                socket.emit('moveRight');
+                socket.emit('pressRight');
                 break;
           case 40:
-                socket.emit('moveDown');
+                socket.emit('pressDown');
                 break;
+        }
+      }, false);
+
+      addEventListener('keyup', function (e) {
+        switch (e.keyCode) {
+          case 37:
+            socket.emit('releaseLeft');
+            break;
+          case 38:
+            socket.emit('releaseUp');
+            break;
+          case 39:
+            socket.emit('releaseRight');
+            break;
+          case 40:
+            socket.emit('releaseDown');
+            break;
         }
       }, false);
 
@@ -96,9 +113,6 @@
       });
 
       //To use later
-      /*addEventListener('keyup', function (e) {
-        socket.emit('keyup', e.keyCode);
-      }, false);*/
       /*var submit = $("#username button");
       submit.on('click', function() {
           $("#username").hide();
