@@ -45,25 +45,22 @@
             if (maze[i][j].left) {
               ctx.moveTo(canvas.width * i / rows, canvas.height * j / cols);
               ctx.lineTo(canvas.width * i / rows, canvas.height * (j+1) / cols);
-              ctx.stroke();
             }
             if (maze[i][j].right) {
               ctx.moveTo(canvas.width * (i+1) / rows, canvas.height * j / cols);
               ctx.lineTo(canvas.width * (i+1) / rows, canvas.height * (j+1) / cols);
-              ctx.stroke();
             }
             if (maze[i][j].top) {
               ctx.moveTo(canvas.width * i / rows, canvas.height * j / cols);
               ctx.lineTo(canvas.width * (i+1) / rows, canvas.height * j / cols);
-              ctx.stroke();
             }
             if (maze[i][j].bottom) {
               ctx.moveTo(canvas.width * i / rows, canvas.height * (j+1) / cols);
               ctx.lineTo(canvas.width * (i+1) / rows, canvas.height * (j+1) / cols);
-              ctx.stroke();
             }
           }
         }
+        ctx.stroke();
         ctx.closePath();
       });
       /*addEventListener('keyup', function (e) {
