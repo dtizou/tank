@@ -10,9 +10,11 @@
       }
     </style>
   </head>
-  <!--<div id="username" style="position:absolute; top:50%; left:50%">
-      <input autocomplete="off" /><button>Username</button>
-  </div>-->
+  <div id="form" style="margin: auto; position: absolute; top: 0; left: 0; bottom: 0; right: 0; width: 200px; height: 100px; text-align: center;">
+    <div>Username: <input id="username" autocomplete="off"/></div>
+    <div>Color: <input id="color" autocomplete="off"/></div>
+    <button style="margin: 0 auto;">Play!</button>
+  </div>
   <canvas id="mazeCanvas" style="z-index: 0"></canvas>
   <canvas id="tankCanvas" style="z-index: 1"></canvas>
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
@@ -25,6 +27,12 @@
       var tankCanvas = document.getElementById('tankCanvas');
       var mazeCtx = mazeCanvas.getContext('2d');
       var tankCtx = tankCanvas.getContext('2d');
+
+      //Submit username
+      $("#form button").on('click', function() {
+        $('#form').hide();
+        socket.emit('addUser', $('#username').val(), $('#color').val());
+      });
 
       //Send key events to server
       addEventListener('keydown', function (e) {
@@ -72,16 +80,23 @@
 
       //Redraws the new tank positions
       socket.on('drawTanks', function(users) {
+        if($('#form:visible').length != 0) {
+          return;
+        }
         tankCtx.clearRect(0, 0, tankCanvas.width, tankCanvas.height);
-        tankCtx.beginPath();
         for (var user in users) {
           if (users.hasOwnProperty(user)) {
+            tankCtx.beginPath();
             tankCtx.rect(users[user].x, users[user].y, users[user].width, users[user].height);
+            tankCtx.fillStyle = users[user].randColor;
             tankCtx.fillStyle = users[user].color;
             tankCtx.fill();
+            tankCtx.fillStyle = 'black';
+            tankCtx.font = '12px Arial';
+            tankCtx.fillText(users[user].username, users[user].x, users[user].y + users[user].height / 2 + 3);
+            tankCtx.closePath();
           }
         }
-        tankCtx.closePath();
       });
 
       //Draws the maze
@@ -111,13 +126,6 @@
         mazeCtx.stroke();
         mazeCtx.closePath();
       });
-
-      //To use later
-      /*var submit = $("#username button");
-      submit.on('click', function() {
-          $("#username").hide();
-          socket.emit("addUser", $("#username input").val());
-      });*/
     </script>
   </body>
 </html>

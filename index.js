@@ -15,9 +15,9 @@ var speed = 3;
 
 setInterval(updateTanks, 25);
 
-function init(socket) {
-  users[socket.id] = {x: 0, y: 0, width: 50, height: 50, left: false, right: false, up: false, down: false};
-  users[socket.id].color = getRandomColor();
+function init(socket, username, color) {
+  users[socket.id] = {x: 0, y: 0, width: 50, height: 50, left: false, right: false, up: false, down: false, color: color, username: username};
+  users[socket.id].randColor = getRandomColor();
   setCanvasSize();
   drawMaze();
   updateTanks();
@@ -81,8 +81,10 @@ function fixCollision(socketid) {
 }
 
 io.on('connection', function(socket){
-  //Things to do when connection to socket starts
-  init(socket);
+  //Starts game on username submit
+  socket.on('addUser', function(username, color){
+    init(socket, username, color);
+  });
   
   //Receiving events
   socket.on('pressLeft', function(){
@@ -118,11 +120,7 @@ io.on('connection', function(socket){
   socket.on('disconnect', function(){
     delete users[socket.id];
     drawTanks();
-  })
-  
-  /*socket.on('addUser', function(user){
-    console.log(user);
-  });*/
+  });
 });
 
 http.listen(3000, function(){
