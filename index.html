@@ -101,6 +101,9 @@
 
       //Draws the maze
       socket.on('drawMaze', function(maze) {
+        if($('#form:visible').length != 0) {
+          return;
+        }
         mazeCtx.beginPath();
         mazeCtx.lineWidth = 2;
         for (var i = 0; i < maze.rows; i++) {
