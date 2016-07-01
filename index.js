@@ -15,6 +15,24 @@ var speed = 3;
 
 setInterval(updateTanks, 25);
 
+function init(socket) {
+  users[socket.id] = {x: 0, y: 0, width: 50, height: 50, left: false, right: false, up: false, down: false};
+  users[socket.id].color = getRandomColor();
+  setCanvasSize();
+  drawMaze();
+  updateTanks();
+}
+
+function getRandomColor() {
+  var color = '#';
+  var chars = '0123456789abcdef';
+  for (var i = 0; i < 6; i++)
+  {
+    color += chars[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
 function updateTanks() {
   for (var user in users) {
     if (users[user].left) {
@@ -64,11 +82,7 @@ function fixCollision(socketid) {
 
 io.on('connection', function(socket){
   //Things to do when connection to socket starts
-  users[socket.id] = {x: 0, y: 0, width: 50, height: 50, color: '#ff0000', left: false, right: false, up: false, down: false};
-  setCanvasSize();
-  drawMaze();
-  drawTanks();
-  //console.log(socket.id);
+  init(socket);
   
   //Receiving events
   socket.on('pressLeft', function(){
