@@ -3,7 +3,7 @@
 <head>
 	<title>Tank game</title>
 	<style>
-		canvas {
+      canvas {
 			position: absolute;
 			top: 0;
 			left: 0;
@@ -11,17 +11,24 @@
 	</style>
 </head>
 <div id="form"
-	 style="margin: auto; position: absolute; top: 0; left: 0; bottom: 0; right: 0; width: 200px; height: 100px; text-align: center;">
-	<div>Username: <input id="username" autocomplete="off"/></div>
-	<div>Color: <input id="color" autocomplete="off"/></div>
-	<button style="margin: 0 auto;">Play!</button>
+     style="margin: auto; position: absolute; top: 0; left: 0; bottom: 0; right: 0; width: 200px; height: 100px; text-align: center;">
+    <div>Username: <input id="username" autocomplete="off"/></div>
+    <div>Choose a Color</div>
+    <select id="colors">
+      <option value="red">red</option>
+      <option value="blue">blue</option>
+      <option value="green">green</option>
+
+    </select>
+  <br/>
+  <button style="margin: 0 auto;">Play!</button>
 </div>
-<canvas id="mazeCanvas" style="z-index: 0"></canvas>
-<canvas id="tankCanvas" style="z-index: 1"></canvas>
-<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
-<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
-<script>
-	//Basic variables defined
+  <canvas id="mazeCanvas" style="z-index: 0"></canvas>
+  <canvas id="tankCanvas" style="z-index: 1"></canvas>
+  <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+  <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+  <script>
+  	//Basic variables defined
 	var socket = io();
 	var canvasWidth, canvasHeight;
 	var mazeCanvas = document.getElementById('mazeCanvas');
@@ -32,10 +39,9 @@
 	//Submit username
 	$("#form button").on('click', function () {
 		$('#form').hide();
-		socket.emit('addUser', $('#username').val(), $('#color').val());
-	});
-
-	//Send key events to server
+		socket.emit('addUser', $('#username').val(), $('#colors').val());
+    });
+    //Send key events to server
 	addEventListener('keydown', function (e) {
 		console.log(e.keyCode);
 		switch (e.keyCode) {
