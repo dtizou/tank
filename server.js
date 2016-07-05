@@ -26,9 +26,10 @@ function init(socket, username, color) {
 		up: false,
 		down: false,
 		color: color,
+		randColor: getRandomColor(),
 		username: username
 	};
-	users[socket.id].randColor = getRandomColor();
+	//users[socket.id].randColor = getRandomColor();
 	setCanvasSize();
 	drawMaze();
 	updateTanks();
