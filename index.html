@@ -5,8 +5,8 @@
 	<style>
 		canvas {
 			position: absolute;
-			top: 0;
-			left: 0;
+			top: 5px;
+			left: 5px;
 		}
 	</style>
 </head>
@@ -107,50 +107,52 @@
 		if (!isInit) {
 			return;
 		}
-		tankCtx.clearRect(0, 0, tankCanvas.width, tankCanvas.height);
+		tankCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+		tankCtx.beginPath();
 		for (var user in users) {
 			if (users.hasOwnProperty(user)) {
-				tankCtx.beginPath();
-				tankCtx.rect(users[user].x, users[user].y, users[user].width, users[user].height);
 				tankCtx.fillStyle = users[user].randColor;
 				tankCtx.fillStyle = users[user].color;
-				tankCtx.fill();
+				tankCtx.translate(users[user].x, users[user].y);
+				tankCtx.rotate(users[user].angle);
+				tankCtx.fillRect(-users[user].height / 2, -users[user].width / 2, users[user].height, users[user].width);
+				tankCtx.fillStyle = 'black';
+				tankCtx.fillRect(-users[user].height / 6, -users[user].width / 6, 5 * users[user].height / 6, users[user].width / 3);
+				tankCtx.rotate(-users[user].angle);
+				tankCtx.translate(-users[user].x, -users[user].y);
 				tankCtx.fillStyle = 'black';
 				tankCtx.font = '12px Arial';
 				tankCtx.fillText(users[user].username, users[user].x, users[user].y + users[user].height / 2 + 3);
-				tankCtx.closePath();
 			}
 		}
+		tankCtx.closePath();
 	});
 
 	//Draws the maze
-	socket.on('drawMaze', function (maze) {
+	socket.on('drawMaze', function (maze, rows, cols, wallWidth) {
 		if (!isInit) {
 			return;
 		}
+		var cellWidth = (canvasWidth - (cols + 1) * wallWidth) / cols;
+		var cellHeight = (canvasHeight - (rows + 1) * wallWidth) / rows;
 		mazeCtx.beginPath();
-		mazeCtx.lineWidth = 2;
-		for (var i = 0; i < maze.rows; i++) {
-			for (var j = 0; j < maze.cols; j++) {
-				if (maze.maze[i][j].left && j == 0) {
-					mazeCtx.moveTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * i / maze.rows);
-					mazeCtx.lineTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * (i + 1) / maze.rows);
+		for (var i = 0; i < rows; i++) {
+			for (var j = 0; j < cols; j++) {
+				if (maze[i][j].left && j == 0) {
+					mazeCtx.rect(j * (cellWidth + wallWidth), i * (cellHeight + wallWidth), wallWidth, cellHeight + 2 * wallWidth);
 				}
-				if (maze.maze[i][j].right) {
-					mazeCtx.moveTo(mazeCanvas.width * (j + 1) / maze.cols, mazeCanvas.height * i / maze.rows);
-					mazeCtx.lineTo(mazeCanvas.width * (j + 1) / maze.cols, mazeCanvas.height * (i + 1) / maze.rows);
+				if (maze[i][j].right) {
+					mazeCtx.rect((j + 1) * (cellWidth + wallWidth), i * (cellHeight + wallWidth), wallWidth, cellHeight + 2 * wallWidth);
 				}
-				if (maze.maze[i][j].top && i == 0) {
-					mazeCtx.moveTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * i / maze.rows);
-					mazeCtx.lineTo(mazeCanvas.width * (j + 1) / maze.cols, mazeCanvas.height * i / maze.rows);
+				if (maze[i][j].top && i == 0) {
+					mazeCtx.rect(j * (cellWidth + wallWidth), i * (cellHeight + wallWidth), cellWidth + 2 * wallWidth, wallWidth);
 				}
-				if (maze.maze[i][j].bottom) {
-					mazeCtx.moveTo(mazeCanvas.width * j / maze.cols, mazeCanvas.height * (i + 1) / maze.rows);
-					mazeCtx.lineTo(mazeCanvas.width * (j + 1) / maze.cols, mazeCanvas.height * (i + 1) / maze.rows);
+				if (maze[i][j].bottom) {
+					mazeCtx.rect(j * (cellWidth + wallWidth), (i + 1) * (cellHeight + wallWidth), cellWidth + 2 * wallWidth, wallWidth);
 				}
 			}
 		}
-		mazeCtx.stroke();
+		mazeCtx.fill();
 		mazeCtx.closePath();
 	});
 </script>

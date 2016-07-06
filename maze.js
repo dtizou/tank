@@ -50,7 +50,7 @@ module.exports = {
 			stack.push(nextCell);
 		}
 
-		return {maze: maze, rows: rows, cols: cols};
+		return maze;
 	},
 
 	validCells: function(maze, rows, cols, x, y) {

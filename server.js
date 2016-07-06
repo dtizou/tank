@@ -11,16 +11,19 @@ var users = {};
 var canvasSize = [700, 1200]; //height and width
 var mazeDimensions = [7, 12]; //rows and cols
 var maze = mazeGen.generateMaze(mazeDimensions[0], mazeDimensions[1]);
-var speed = 3;
+var speed = 4;
+var rotSpeed = 5 * Math.PI / 180;
+var wallWidth = 8;
 
 setInterval(updateTanks, 25);
 
 function init(socket, username, color) {
 	users[socket.id] = {
-		x: 0,
-		y: 0,
-		width: 50,
-		height: 50,
+		x: 28,
+		y: 23,
+		width: 30,
+		height: 40,
+		angle: 0,
 		left: false,
 		right: false,
 		up: false,
@@ -45,19 +48,7 @@ function getRandomColor() {
 
 function updateTanks() {
 	for (var user in users) {
-		if (users[user].left) {
-			users[user].x -= speed;
-		}
-		if (users[user].right) {
-			users[user].x += speed;
-		}
-		if (users[user].up) {
-			users[user].y -= speed;
-		}
-		if (users[user].down) {
-			users[user].y += speed;
-		}
-		fixCollision(user);
+		updateTank(user);
 	}
 	drawTanks();
 }
@@ -67,26 +58,27 @@ function drawTanks() {
 }
 
 function drawMaze() {
-	io.emit('drawMaze', maze);
+	io.emit('drawMaze', maze, mazeDimensions[0], mazeDimensions[1], wallWidth);
 }
 
 function setCanvasSize() {
 	io.emit('setCanvasSize', canvasSize);
 }
 
-function fixCollision(socketid) {
-	var cell = [Math.floor((users[socketid].y + users[socketid].height / 2) * mazeDimensions[0] / canvasSize[0]), Math.floor((users[socketid].x + users[socketid].width / 2) * mazeDimensions[1] / canvasSize[1])];
-	if (users[socketid].x < cell[1] * canvasSize[1] / mazeDimensions[1] && maze.maze[cell[0]][cell[1]].left) {
-		users[socketid].x = cell[1] * canvasSize[1] / mazeDimensions[1];
+function updateTank(user) {
+	if (users[user].left) {
+		users[user].angle -= rotSpeed;
 	}
-	if (users[socketid].x > (cell[1] + 1) * canvasSize[1] / mazeDimensions[1] - users[socketid].width && maze.maze[cell[0]][cell[1]].right) {
-		users[socketid].x = (cell[1] + 1) * canvasSize[1] / mazeDimensions[1] - users[socketid].width;
+	if (users[user].right) {
+		users[user].angle += rotSpeed;
 	}
-	if (users[socketid].y < cell[0] * canvasSize[0] / mazeDimensions[0] && maze.maze[cell[0]][cell[1]].top) {
-		users[socketid].y = cell[0] * canvasSize[0] / mazeDimensions[0];
+	if (users[user].up) {
+		users[user].x += Math.cos(users[user].angle) * speed;
+		users[user].y += Math.sin(users[user].angle) * speed;
 	}
-	if (users[socketid].y > (cell[0] + 1) * canvasSize[0] / mazeDimensions[0] - users[socketid].height && maze.maze[cell[0]][cell[1]].bottom) {
-		users[socketid].y = (cell[0] + 1) * canvasSize[0] / mazeDimensions[0] - users[socketid].height;
+	if (users[user].down) {
+		users[user].x -= Math.cos(users[user].angle) * speed;
+		users[user].y -= Math.sin(users[user].angle) * speed;
 	}
 }
 
