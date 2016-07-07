@@ -14,15 +14,17 @@ var maze = mazeGen.generateMaze(mazeDimensions[0], mazeDimensions[1]);
 var speed = 4;
 var rotSpeed = 5 * Math.PI / 180;
 var wallWidth = 8;
+var cellWidth = (canvasSize[1] - (mazeDimensions[1] + 1) * wallWidth) / mazeDimensions[1];
+var cellHeight = (canvasSize[0] - (mazeDimensions[0] + 1) * wallWidth) / mazeDimensions[0];
 
 setInterval(updateTanks, 25);
 
 function init(socket, username, color) {
 	users[socket.id] = {
-		x: 28,
-		y: 23,
-		width: 30,
-		height: 40,
+		x: 38,
+		y: 33,
+		width: 12,
+		height: 16,
 		angle: 0,
 		left: false,
 		right: false,
@@ -65,6 +67,40 @@ function setCanvasSize() {
 	io.emit('setCanvasSize', canvasSize);
 }
 
+function getCell(point) {
+	var cell = [Math.floor((point[0] - wallWidth / 2) / (cellHeight + wallWidth)), Math.floor((point[1] - wallWidth / 2) / (cellWidth + wallWidth))];
+	if (cell[0] < 0) {
+		cell[0] = 0;
+	}
+	if (cell[0] >= mazeDimensions[0]) {
+		cell[0] = mazeDimensions[0] - 1;
+	}
+	if (cell[1] < 0) {
+		cell[1] = 0;
+	}
+	if (cell[1] >= mazeDimensions[1]) {
+		cell[1] = mazeDimensions[1] - 1;
+	}
+	return cell;
+}
+
+function getWall(point) {
+	var cell = getCell(point);
+	if (point[0] <= (cellHeight + wallWidth) * cell[0] + wallWidth && maze[cell[0]][cell[1]].top) {
+		return [cell[0] - 0.5, cell[1]];
+	}
+	if (point[0] >= (cellHeight + wallWidth) * (cell[0] + 1) && maze[cell[0]][cell[1]].bottom) {
+		return [cell[0] + 0.5, cell[1]];
+	}
+	if (point[1] <= (cellWidth + wallWidth) * cell[1] + wallWidth && maze[cell[0]][cell[1]].left) {
+		return [cell[0], cell[1] - 0.5];
+	}
+	if (point[1] >= (cellWidth + wallWidth) * (cell[1] + 1) && maze[cell[0]][cell[1]].right) {
+		return [cell[0], cell[1] + 0.5];
+	}
+	return null;
+}
+
 function updateTank(user) {
 	if (users[user].left) {
 		users[user].angle -= rotSpeed;
@@ -80,6 +116,57 @@ function updateTank(user) {
 		users[user].x -= Math.cos(users[user].angle) * speed;
 		users[user].y -= Math.sin(users[user].angle) * speed;
 	}
+	var vAngle = Math.atan(users[user].width / users[user].height);
+	var vDist = Math.sqrt(users[user].width * users[user].width + users[user].height * users[user].height) / 2;
+	//Add additional points if necessary (in the form (y, x))
+	var points = [[Math.sin(users[user].angle + vAngle) * vDist + users[user].y, Math.cos(users[user].angle + vAngle) * vDist + users[user].x],
+		[Math.sin(users[user].angle - vAngle) * vDist + users[user].y, Math.cos(users[user].angle - vAngle) * vDist + users[user].x],
+		[Math.sin(users[user].angle + vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle + vAngle + Math.PI) * vDist + users[user].x],
+		[Math.sin(users[user].angle - vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle - vAngle + Math.PI) * vDist + users[user].x]];
+	var cell = getCell([users[user].y, users[user].x]);
+	var sin = Math.sin(users[user].angle);
+	var cos = Math.cos(users[user].angle);
+	var finalTransform = [0, 0];
+	for (var i = 0; i < points.length; i++) {
+		var wall = getWall(points[i]);
+		if (wall == null) {
+			continue;
+		}
+		var transform = [0, 0];
+		if (wall[0] == cell[0]) {
+			if (wall[1] == cell[1] - 0.5) {
+				transform[1] = ((cellWidth + wallWidth) * cell[1] + wallWidth) - points[i][1];
+				if (cos != 0) {
+					transform[0] = transform[1] * (sin / cos > 2 ? 2 : sin / cos);
+				}
+			}
+			else {
+				transform[1] = (cellWidth + wallWidth) * (cell[1] + 1) - points[i][1];
+				if (cos != 0) {
+					transform[0] = transform[1] * (sin / cos > 2 ? 2 : sin / cos);
+				}
+			}
+		}
+		else {
+			if (wall[0] == cell[0] - 0.5) {
+				transform[0] = ((cellHeight + wallWidth) * cell[0] + wallWidth) - points[i][0];
+				if (sin != 0) {
+					transform[1] = transform[0] * (cos / sin > 2 ? 2 : cos / sin);
+				}
+			}
+			else {
+				transform[0] = (cellHeight + wallWidth) * (cell[0] + 1) - points[i][0];
+				if (sin != 0) {
+					transform[1] = transform[0] * (cos / sin > 2 ? 2 : cos / sin);
+				}
+			}
+		}
+		if (Math.abs(transform[0]) > Math.abs(finalTransform[0]) || Math.abs(transform[1]) > Math.abs(finalTransform[1])) {
+			finalTransform = transform;
+		}
+	}
+	users[user].y += finalTransform[0];
+	users[user].x += finalTransform[1];
 }
 
 io.on('connection', function (socket) {
