@@ -107,7 +107,7 @@ function between(a, b, c) {
 
 // ratio of v1 to v2
 function vecRatio(v1, v2) {
-	if (v2[0] == 0) {
+	if (Math.abs(v2[0]) < 0.00000001) {
 		return v1[1] / v2[1];
 	}
 	return v1[0] / v2[0];
@@ -186,9 +186,6 @@ function shiftTank(user, dy, dx) {
 	var rWall = Math.floor(maxX / (cellWidth + wallWidth)) - 0.5;
 	var dWall = Math.ceil((minY - wallWidth) / (cellHeight + wallWidth)) - 0.5;
 	var uWall = Math.floor(maxY / (cellHeight + wallWidth)) - 0.5;
-	console.log(wallWidth + ',' + cellWidth + ',' + cellHeight);
-	console.log(minX + ',' + maxX + ',' + minY + ',' + maxY);
-	console.log(lWall + ',' + rWall + ',' + dWall + ',' + uWall);
 	var walls = [];
 	for (var i = lWall; i <= rWall; i++) {
 		for (var j = dWall - 0.5; j <= uWall + 0.5; j++) {
@@ -212,7 +209,7 @@ function shiftTank(user, dy, dx) {
 		lines = wallLines(walls[i][0], walls[i][1]);
 		// given a wall, take every point on tank and line on wall and find minimum translation of point on tank such that the point is outside of the wall given direction [dy, dx]
 		for (var j = 0; j < points.length; j++) {
-			dist = [0, 0];
+			dist = [1000000*dy, 1000000*dx];
 			// given a point, find the minimum translation in given direction [dy, dx] for point to be outside of wall
 			for (var k = 0; k < 4; k++) {
 				point = lineIntersection(points[j], [dy, dx], lines[k]);
@@ -230,7 +227,8 @@ function shiftTank(user, dy, dx) {
 					}
 				}
 				tempDist = [point[0] - points[j][0], point[1] - points[j][1]];
-				if (vecRatio(tempDist, [dy, dx]) >= vecRatio(dist, [dy, dx]) && validMove(tempDist)) {
+				//console.log(tempDist);
+				if (vecRatio(tempDist, [dy, dx]) <= vecRatio(dist, [dy, dx]) && vecRatio(tempDist, [dy, dx]) >= 0) {
 					dist = tempDist;
 				}
 			}
