@@ -23,8 +23,8 @@ function init(socket, username, color) {
 	users[socket.id] = {
 		x: 38,
 		y: 33,
-		width: 12,
-		height: 16,
+		width: 30,
+		height: 40,
 		angle: 0,
 		left: false,
 		right: false,
@@ -67,59 +67,106 @@ function setCanvasSize() {
 	io.emit('setCanvasSize', canvasSize);
 }
 
-//returns cell containing point with boundaries defined by the middle of the wall
-function getCell(point) {
-	var cell = [Math.floor((point[0] - wallWidth / 2) / (cellHeight + wallWidth)), Math.floor((point[1] - wallWidth / 2) / (cellWidth + wallWidth))];
-	if (cell[0] < 0) {
-		cell[0] = 0;
-	}
-	if (cell[0] >= mazeDimensions[0]) {
-		cell[0] = mazeDimensions[0] - 1;
-	}
-	if (cell[1] < 0) {
-		cell[1] = 0;
-	}
-	if (cell[1] >= mazeDimensions[1]) {
-		cell[1] = mazeDimensions[1] - 1;
-	}
-	return cell;
+function dotProduct(v1, v2) {
+	return v1[0] * v2[0] + v1[1] * v2[1];
 }
 
-//returns wall coordinates similar to cell coordinates
-function getWall(point) {
-	var cell = getCell(point);
-	if (point[0] <= (cellHeight + wallWidth) * cell[0] + wallWidth && maze[cell[0]][cell[1]].top) {
-		return [cell[0] - 0.5, cell[1]];
-	}
-	if (point[0] >= (cellHeight + wallWidth) * (cell[0] + 1) && maze[cell[0]][cell[1]].bottom) {
-		return [cell[0] + 0.5, cell[1]];
-	}
-	if (point[1] <= (cellWidth + wallWidth) * cell[1] + wallWidth && maze[cell[0]][cell[1]].left) {
-		return [cell[0], cell[1] - 0.5];
-	}
-	if (point[1] >= (cellWidth + wallWidth) * (cell[1] + 1) && maze[cell[0]][cell[1]].right) {
-		return [cell[0], cell[1] + 0.5];
-	}
-	return null;
-}
 /*
+function lineIntersection(p1, v, p2, p3)
+returns intersection of line through p1 and vector v for direction (slope = v[0] / v[1]) and line through p2 and p3
+all variables coordinates in the form [y, x]
+if no intersection (ie slopes are equal and p1 isn't on line through p2 and p3) return null
+otherwise return coordinates in the form [y, x]
+
+function below used different form for wall line
+ */
+
+function lineIntersection(p, v, wall) {
+	if (wall[0] == 'x') {
+		if (v[1] == 0) {
+			if (p[1] == wall[1]) {
+				return p;
+			}
+			return null;
+		}
+		return [(wall[1] - p[1]) * v[0] / v[1] + p[0], wall[1]];
+	}
+	if (v[0] == 0) {
+		if (p[0] == wall[1]) {
+			return p;
+		}
+		return null;
+	}
+	return [wall[1], (wall[1] - p[0]) * v[1] / v[0] + p[1]];
+}
+
+// a is between b and c
+function between(a, b, c) {
+	return (a >= b && a <= c) || (a <= b && a >= c);
+}
+
+// ratio of v1 to v2
+function vecRatio(v1, v2) {
+	if (v2[0] == 0) {
+		return v1[1] / v2[1];
+	}
+	return v1[0] / v2[0];
+}
+
+// translation is too much
+function validMove(t) {
+	return (Math.abs(t[0]) <= speed) && (Math.abs(t[1]) <= speed);
+}
+
+// checks if coords are located at wall
+function isWall(y, x) {
+	if (x <= -1 || y <= -1 || x >= mazeDimensions[1] || y >= mazeDimensions[0]) {
+		return false;
+	}
+	if (y % 1 != 0) {
+		if (y > 0) {
+			return maze[y-0.5][x].bottom;
+		}
+		return maze[y+0.5][x].top;
+	}
+	else {
+		if (x > 0) {
+			return maze[y][x-0.5].right;
+		}
+		return maze[y][x+0.5].left;
+	}
+}
+
+// returns lines containing wall, lines in the form of [0] = x/y, x/y = [1], y/x = [[2], [3]]
+function wallLines(y, x) {
+	if (y % 1 != 0) {
+		return [['x', x * (cellWidth + wallWidth), (y+0.5) * (cellHeight + wallWidth), (y+0.5) * (cellHeight + wallWidth) + wallWidth],
+			['x', x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth, (y+0.5) * (cellHeight + wallWidth), (y+0.5) * (cellHeight + wallWidth) + wallWidth],
+			['y', (y+0.5) * (cellHeight + wallWidth), x * (cellWidth + wallWidth), x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth],
+			['y', (y+0.5) * (cellHeight + wallWidth) + wallWidth, x * (cellWidth + wallWidth), x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth]];
+	}
+	else {
+		return [['y', y * (cellHeight + wallWidth), (x+0.5) * (cellWidth + wallWidth), (x+0.5) * (cellWidth + wallWidth) + wallWidth],
+			['y', y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth, (x+0.5) * (cellWidth + wallWidth), (x+0.5) * (cellWidth + wallWidth) + wallWidth],
+			['x', (x+0.5) * (cellWidth + wallWidth), y * (cellHeight + wallWidth), y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth],
+			['x', (x+0.5) * (cellWidth + wallWidth) + wallWidth, y * (cellHeight + wallWidth), y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth]];
+	}
+}
+
+// return transformation that needs to be applied to tank
 function shiftTank(user, dy, dx) {
+	// variables used to compute location of points on rectangle
 	var vAngle = Math.atan(users[user].width / users[user].height);
 	var vDist = Math.sqrt(users[user].width * users[user].width + users[user].height * users[user].height) / 2;
-	//Add additional points if necessary (in the form (y, x) and in order)
+	// points on tank for checking collision (in the form (y, x))
 	var points = [[Math.sin(users[user].angle + vAngle) * vDist + users[user].y, Math.cos(users[user].angle + vAngle) * vDist + users[user].x],
 		[Math.sin(users[user].angle - vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle - vAngle + Math.PI) * vDist + users[user].x],
 		[Math.sin(users[user].angle + vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle + vAngle + Math.PI) * vDist + users[user].x],
-		[Math.sin(users[user].angle - vAngle) * vDist + users[user].y, Math.cos(users[user].angle - vAngle) * vDist + users[user].x],
-		[Math.sin(users[user].angle + vAngle) * vDist + users[user].y, Math.cos(users[user].angle + vAngle) * vDist + users[user].x]];
-	var cell = getCell([users[user].y, users[user].x]);
-	var maxRatio = 3; //in case of large ratio causing issues
-	var minX = 1000000, maxX = -1000000, minY = 1000000, maxY = -1000000;
-	var finalTransform = [0, 0];
+		[Math.sin(users[user].angle - vAngle) * vDist + users[user].y, Math.cos(users[user].angle - vAngle) * vDist + users[user].x]];
 
-	//tank corner in wall case
-	for (var i = 0; i < points.length - 1; i++) {
-		//for next collision section
+	// min/max x/y values to find bounding box around tank
+	var minX = 1000000, maxX = -1000000, minY = 1000000, maxY = -1000000;
+	for (var i = 0; i < points.length; i++) {
 		if (points[i][0] > maxY) {
 			maxY = points[i][0];
 		}
@@ -132,234 +179,122 @@ function shiftTank(user, dy, dx) {
 		if (points[i][1] < minX) {
 			minX = points[i][1];
 		}
+	}
 
-		var wall = getWall(points[i]);
-		if (wall == null) {
-			continue;
-		}
-		//finds transformation for each vertex on wall in direction of tank
-		var transform = [0, 0];
-		console.log(wall);
-		if (wall[0] == cell[0]) {
-			if (wall[1] == cell[1] - 0.5) {
-				transform[1] = ((cellWidth + wallWidth) * cell[1] + wallWidth) - points[i][1];
-				//if (dx != 0) {
-				//	transform[0] = transform[1] * (dy / dx > maxRatio ? maxRatio : dy / dx);
-				//}
-			}
-			else {
-				transform[1] = (cellWidth + wallWidth) * (cell[1] + 1) - points[i][1];
-				//if (dx != 0) {
-				//	transform[0] = transform[1] * (dy / dx > maxRatio ? maxRatio : dy / dx);
-				//}
+	// get all walls that could overlap tank
+	var lWall = Math.ceil((minX - wallWidth) / (cellWidth + wallWidth)) - 0.5;
+	var rWall = Math.floor(maxX / (cellWidth + wallWidth)) - 0.5;
+	var dWall = Math.ceil((minY - wallWidth) / (cellHeight + wallWidth)) - 0.5;
+	var uWall = Math.floor(maxY / (cellHeight + wallWidth)) - 0.5;
+	console.log(wallWidth + ',' + cellWidth + ',' + cellHeight);
+	console.log(minX + ',' + maxX + ',' + minY + ',' + maxY);
+	console.log(lWall + ',' + rWall + ',' + dWall + ',' + uWall);
+	var walls = [];
+	for (var i = lWall; i <= rWall; i++) {
+		for (var j = dWall - 0.5; j <= uWall + 0.5; j++) {
+			if (isWall(j, i)) {
+				walls.push([j, i]);
 			}
 		}
-		else {
-			if (wall[0] == cell[0] - 0.5) {
-				transform[0] = ((cellHeight + wallWidth) * cell[0] + wallWidth) - points[i][0];
-				//if (dy != 0) {
-				//	transform[1] = transform[0] * (dx / dy > maxRatio ? maxRatio : dx / dy);
-				//}
+	}
+	for (var i = dWall; i <= uWall; i++) {
+		for (var j = lWall - 0.5; j <= rWall + 0.5; j++) {
+			if (isWall(i, j)) {
+				walls.push([i, j]);
 			}
-			else {
-				transform[0] = (cellHeight + wallWidth) * (cell[0] + 1) - points[i][0];
-				//if (dy != 0) {
-				//	transform[1] = transform[0] * (dx / dy > maxRatio ? maxRatio : dx / dy);
-				//}
-			}
-		}
-		console.log(transform);
-		//for moving in direction of tank
-		//if ((transform[0] * transform[0] + transform[1] * transform[1]) >= (finalTransform[0] * finalTransform[0] + finalTransform[1] * finalTransform[1]) && (transform[0] * transform[0] + transform[1] * transform[1]) <= 2 * speed * speed) {
-		//	finalTransform = transform;
-		//}
-		//for sliding against wall
-		if (Math.abs(transform[0]) > Math.abs(finalTransform[0]) && Math.abs(transform[0]) <= speed) {
-			finalTransform[0] = transform[0];
-		}
-		if (Math.abs(transform[1]) > Math.abs(finalTransform[1]) && Math.abs(transform[1]) <= speed) {
-			finalTransform[1] = transform[1];
 		}
 	}
 
-	//wall corner in tank case
-	minY = Math.floor(minY / (cellHeight + wallWidth)) - 0.25 + (minY % (cellHeight + wallWidth) > wallWidth ? 0.5 : 0);
-	maxY = Math.floor(maxY / (cellHeight + wallWidth)) - 0.75 + (maxY % (cellHeight + wallWidth) >= wallWidth ? 0.5 : 0);
-	minX = Math.floor(minX / (cellWidth + wallWidth)) - 0.25 + (minX % (cellWidth + wallWidth) > wallWidth ? 0.5 : 0);
-	maxX = Math.floor(maxX / (cellWidth + wallWidth)) - 0.75 + (maxX % (cellWidth + wallWidth) >= wallWidth ? 0.5 : 0);
-	var vx, vy, px, py, dp, count = 0;
-	var transform = [1000000, 1000000];
-	for (var i = minY; i <= maxY; i += 0.5) {
-		for (var j = minX; j <= maxX; j += 0.5) {
-			vy = Math.floor(i+1) * (cellHeight + wallWidth) + ((i - Math.floor(i) == 0.75) ? wallWidth : 0);
-			vx = Math.floor(j+1) * (cellWidth + wallWidth) + ((j - Math.floor(j) == 0.75) ? wallWidth : 0);
-			for (var k = 0; k < points.length - 1; k++) {
-				// origin: points[k][1], points[k][0]
-				// u = vx - points[k][1], vy - points[k][0]
-				// v = points[k+1][1] - points[k][1], points[k+1][0] - points[k][0] is the vertex of wall
-				// p is projection
-				// dp is for dot product stuff for projection
-				dp = ((points[k+1][1] - points[k][1]) * (vx - points[k][1]) + (points[k+1][0] - points[k][0]) * (vy - points[k][0])) / ((points[k+1][1] - points[k][1]) * (points[k+1][1] - points[k][1]) + (points[k+1][0] - points[k][0]) * (points[k+1][0] - points[k][0]));
-				px = points[k][1] + dp * (points[k+1][1] - points[k][1]);
-				py = points[k][0] + dp * (points[k+1][0] - points[k][0]);
-				if ((px >= points[k][1] && px <= points[k+1][1] || px <= points[k][1] && px >= points[k+1][1]) && (py >= points[k][0] && py <= points[k+1][0] || py <= points[k][0] && py >= points[k+1][0])) {
-					count++;
-					if ((users[user].x - px) * (vx - px) + (users[user].y - py) * (vy - py) >= 0) {
-						if ((vy - py) * (vy - py) + (vx - px) * (vx - px) < transform[0] * transform[0] + transform[1] * transform[1] && (dx == 0 || Math.abs(dy / dx - (vy - py) / (vx - px)) <= 0.000001) && ((vy - py) * (vy - py) + (vx - px) * (vx - px) <= 2 * speed * speed)) {
-							transform = [vy - py - 2 * dy, vx - px - 2 * dx];
-						}
+	// get final transformation by finding maximum transformation necessary
+	var transform, finalTransform = [0, 0], lines, point, dist, tempDist;
+	for (var i = 0; i < walls.length; i++) {
+		transform = [0, 0];
+		lines = wallLines(walls[i][0], walls[i][1]);
+		// given a wall, take every point on tank and line on wall and find minimum translation of point on tank such that the point is outside of the wall given direction [dy, dx]
+		for (var j = 0; j < points.length; j++) {
+			dist = [0, 0];
+			// given a point, find the minimum translation in given direction [dy, dx] for point to be outside of wall
+			for (var k = 0; k < 4; k++) {
+				point = lineIntersection(points[j], [dy, dx], lines[k]);
+				if (point == null) {
+					continue;
+				}
+				if (lines[k][0] == 'x') {
+					if (!between(point[0], lines[k][2], lines[k][3])) {
+						continue;
 					}
 				}
+				else {
+					if (!between(point[1], lines[k][2], lines[k][3])) {
+						continue;
+					}
+				}
+				tempDist = [point[0] - points[j][0], point[1] - points[j][1]];
+				if (vecRatio(tempDist, [dy, dx]) >= vecRatio(dist, [dy, dx]) && validMove(tempDist)) {
+					dist = tempDist;
+				}
+			}
+			//console.log('dist: ' + dist);
+			if (dotProduct(dist, dist) > dotProduct(transform, transform) && validMove(dist)) {
+				transform = dist;
 			}
 		}
+		//console.log('transform: ' + transform);
+		if (dotProduct(transform, transform) > dotProduct(finalTransform, finalTransform) && validMove(transform)) {
+			finalTransform = transform;
+		}
 	}
-	if (count > 1 && transform[0] * transform[0] + transform[1] * transform[1] <= 2 * speed * speed) {
-		finalTransform = transform;
-	}
-
-	users[user].y += finalTransform[0];
-	users[user].x += finalTransform[1];
+	//console.log('final: ' + finalTransform);
+	return finalTransform;
 }
 
-function updateTank(user) {
-	var sin, cos;
+function updateTankRotation(user) {
 	if (users[user].left) {
 		users[user].angle -= rotSpeed;
-		sin = Math.cos(users[user].angle);
-		cos = -Math.sin(users[user].angle);
-		shiftTank(user, sin, cos);
-		console.log('rotate:' + users[user].x + ',' + users[user].y);
 	}
 	else if (users[user].right) {
 		users[user].angle += rotSpeed;
-		sin = -Math.cos(users[user].angle);
-		cos = Math.sin(users[user].angle);
-		shiftTank(user, sin, cos);
-		console.log('rotate:' + users[user].x + ',' + users[user].y);
-	}
-	sin = -Math.sin(users[user].angle);
-	cos = -Math.cos(users[user].angle);
-	if (users[user].up) {
-		users[user].x += Math.cos(users[user].angle) * speed;
-		users[user].y += Math.sin(users[user].angle) * speed;
-	}
-	else if (users[user].down) {
-		users[user].x -= Math.cos(users[user].angle) * speed;
-		users[user].y -= Math.sin(users[user].angle) * speed;
 	}
 	else {
 		return;
 	}
-	shiftTank(user, sin, cos);
-	console.log('move:' + users[user].x + ',' + users[user].y);
-}*/
-
-function isColliding(user) {
-	var vAngle = Math.atan(users[user].width / users[user].height);
-	var vDist = Math.sqrt(users[user].width * users[user].width + users[user].height * users[user].height) / 2;
-	//Add additional points if necessary (in the form (y, x) and in order)
-	var points = [[Math.sin(users[user].angle + vAngle) * vDist + users[user].y, Math.cos(users[user].angle + vAngle) * vDist + users[user].x],
-		[Math.sin(users[user].angle - vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle - vAngle + Math.PI) * vDist + users[user].x],
-		[Math.sin(users[user].angle + vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle + vAngle + Math.PI) * vDist + users[user].x],
-		[Math.sin(users[user].angle - vAngle) * vDist + users[user].y, Math.cos(users[user].angle - vAngle) * vDist + users[user].x],
-		[Math.sin(users[user].angle + vAngle) * vDist + users[user].y, Math.cos(users[user].angle + vAngle) * vDist + users[user].x]];
-	var minX = 1000000, maxX = -1000000, minY = 1000000, maxY = -1000000;
-
-	//tank corner in wall case
-	for (var i = 0; i < points.length - 1; i++) {
-		//for next collision section
-		if (points[i][0] > maxY) {
-			maxY = points[i][0];
-		}
-		if (points[i][0] < minY) {
-			minY = points[i][0];
-		}
-		if (points[i][1] > maxX) {
-			maxX = points[i][1];
-		}
-		if (points[i][1] < minX) {
-			minX = points[i][1];
-		}
-
-		var wall = getWall(points[i]);
-		if (wall != null) {
-			return true;
-		}
+	var t1 = shiftTank(user, Math.cos(users[user].angle), -Math.sin(users[user].angle));
+	var t2 = shiftTank(user, -Math.cos(users[user].angle), Math.sin(users[user].angle));
+	if (dotProduct(t1, t1) <= dotProduct(t2, t2)) {
+		users[user].y += t1[0];
+		users[user].x += t1[1];
 	}
-
-	//wall corner in tank case
-	minY = Math.floor(minY / (cellHeight + wallWidth)) - 0.25 + (minY % (cellHeight + wallWidth) > wallWidth ? 0.5 : 0);
-	maxY = Math.floor(maxY / (cellHeight + wallWidth)) - 0.75 + (maxY % (cellHeight + wallWidth) >= wallWidth ? 0.5 : 0);
-	minX = Math.floor(minX / (cellWidth + wallWidth)) - 0.25 + (minX % (cellWidth + wallWidth) > wallWidth ? 0.5 : 0);
-	maxX = Math.floor(maxX / (cellWidth + wallWidth)) - 0.75 + (maxX % (cellWidth + wallWidth) >= wallWidth ? 0.5 : 0);
-	var vx, vy, px, py, dp, count = 0;
-	for (var i = minY; i <= maxY; i += 0.5) {
-		for (var j = minX; j <= maxX; j += 0.5) {
-			vy = Math.floor(i+1) * (cellHeight + wallWidth) + ((i - Math.floor(i) == 0.75) ? wallWidth : 0);
-			vx = Math.floor(j+1) * (cellWidth + wallWidth) + ((j - Math.floor(j) == 0.75) ? wallWidth : 0);
-			for (var k = 0; k < points.length - 1; k++) {
-				// origin: points[k][1], points[k][0]
-				// u = vx - points[k][1], vy - points[k][0]
-				// v = points[k+1][1] - points[k][1], points[k+1][0] - points[k][0] is the vertex of wall
-				// p is projection
-				// dp is for dot product stuff for projection
-				dp = ((points[k+1][1] - points[k][1]) * (vx - points[k][1]) + (points[k+1][0] - points[k][0]) * (vy - points[k][0])) / ((points[k+1][1] - points[k][1]) * (points[k+1][1] - points[k][1]) + (points[k+1][0] - points[k][0]) * (points[k+1][0] - points[k][0]));
-				px = points[k][1] + dp * (points[k+1][1] - points[k][1]);
-				py = points[k][0] + dp * (points[k+1][0] - points[k][0]);
-				if ((px >= points[k][1] && px <= points[k+1][1] || px <= points[k][1] && px >= points[k+1][1]) && (py >= points[k][0] && py <= points[k+1][0] || py <= points[k][0] && py >= points[k+1][0])) {
-					count++;
-					if (count > 1) {
-						return true;
-					}
-				}
-			}
-		}
+	else {
+		users[user].y += t2[0];
+		users[user].x += t2[1];
 	}
-	return false;
+}
+
+function updateTankMovement(user) {
+	var dy, dx;
+	if (users[user].up) {
+		users[user].x += Math.cos(users[user].angle) * speed;
+		users[user].y += Math.sin(users[user].angle) * speed;
+		dx = -Math.cos(users[user].angle);
+		dy = -Math.sin(users[user].angle);
+	}
+	else if (users[user].down) {
+		users[user].x -= Math.cos(users[user].angle) * speed;
+		users[user].y -= Math.sin(users[user].angle) * speed;
+		dx = Math.cos(users[user].angle);
+		dy = Math.sin(users[user].angle);
+	}
+	else {
+		return;
+	}
+	var t = shiftTank(user, dy, dx);
+	users[user].y += t[0];
+	users[user].x += t[1];
 }
 
 function updateTank(user) {
-	//I'm lazy
-	if (users[user].left) {
-		for (var i = 0; i <= rotSpeed; i += Math.PI / 180) {
-			users[user].angle -= Math.PI / 180;
-			if (isColliding(user)) {
-				break;
-			}
-		}
-		users[user].angle += Math.PI / 180;
-	}
-	else if (users[user].right) {
-		for (var i = 0; i <= rotSpeed; i += Math.PI / 180) {
-			users[user].angle += Math.PI / 180;
-			if (isColliding(user)) {
-				break;
-			}
-		}
-		users[user].angle -= Math.PI / 180;
-	}
-	if (users[user].up) {
-		for (var i = 0; i <= speed; i ++) {
-			users[user].x += Math.cos(users[user].angle);
-			users[user].y += Math.sin(users[user].angle);
-			if (isColliding(user)) {
-				break;
-			}
-		}
-		users[user].x -= Math.cos(users[user].angle);
-		users[user].y -= Math.sin(users[user].angle);
-	}
-	else if (users[user].down) {
-		for (var i = 0; i <= speed; i ++) {
-			users[user].x -= Math.cos(users[user].angle);
-			users[user].y -= Math.sin(users[user].angle);
-			if (isColliding(user)) {
-				break;
-			}
-		}
-		users[user].x += Math.cos(users[user].angle);
-		users[user].y += Math.sin(users[user].angle);
-	}
+	updateTankRotation(user);
+	updateTankMovement(user);
 }
 
 io.on('connection', function (socket) {
