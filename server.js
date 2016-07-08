@@ -138,13 +138,14 @@ function wallPoints(y, x) {
 	}
 }
 
-// returns lines containing wall, lines in the form of [0] = x/y, x/y = [1], y/x = [[2], [3]]
-function wallLines(y, x) {
-	var p = wallPoints(y, x);
-	return [[p[0], p[1]],
-		[p[1], p[2]],
-		[p[2], p[3]],
-		[p[3], p[0]]];
+// returns segments formed by points
+function convertToSeg(points) {
+	var segments = [];
+	for (var i = 0; i < points.length - 1; i++) {
+		segments.push([points[i], points[i+1]]);
+	}
+	segments.push([points[points.length-1], points[0]]);
+	return segments;
 }
 
 // returns cell containing point with boundaries defined by the middle of the wall
@@ -166,6 +167,37 @@ function getCell(point) {
 }
 
 // return transformation that needs to be applied to tank
+function shiftPoints(segments, points, dy, dx) {
+	// get final transformation by finding maximum transformation necessary
+	var transform = [0, 0], point, dist, tempDist;
+
+	// given a wall, take every point on tank and line on wall and find minimum translation of point on tank such that the point is outside of the wall given direction [dy, dx]
+	for (var j = 0; j < points.length; j++) {
+		dist = [1000000*dy, 1000000*dx];
+		// given a point, find the minimum translation in given direction [dy, dx] for point to be outside of wall
+		for (var k = 0; k < segments.length; k++) {
+			point = lineIntersection(points[j], [points[j][0] + dy, points[j][1] + dx], segments[k][0], segments[k][1]);
+			if (point == null) {
+				continue;
+			}
+			tempDist = [point[0] - points[j][0], point[1] - points[j][1]];
+			if (point == null || !between(point, segments[k][0], segments[k][1])) {
+				continue;
+			}
+			tempDist = [point[0] - points[j][0], point[1] - points[j][1]];
+			//console.log('tempDist: ' + tempDist);
+			if (vecRatio(tempDist, [dy, dx]) <= vecRatio(dist, [dy, dx]) && vecRatio(tempDist, [dy, dx]) >= 0) {
+				dist = tempDist;
+			}
+		}
+		//console.log('dist: ' + dist);
+		if (dotProduct(dist, dist) > dotProduct(transform, transform) && validMove(dist)) {
+			transform = dist;
+		}
+	}
+	return transform;
+}
+
 function shiftTank(user, dya, dxa) { //dya and dxa are temporary values that may be removed
 	// variables used to compute location of points on rectangle
 	var vAngle = Math.atan(users[user].width / users[user].height);
@@ -214,50 +246,32 @@ function shiftTank(user, dya, dxa) { //dya and dxa are temporary values that may
 		}
 	}
 
-	// get final transformation by finding maximum transformation necessary
-	var transform, finalTransform = [0, 0], lines, point, dist, tempDist, dy, dx, cell = getCell([users[user].y, users[user].x]);
-	console.log('cell: ' + users[user].y + ',' + users[user].x + ',' + cell);
+	var finalTransform = [0, 0], transform, dy, dx, wpoints, segments, cell = getCell([users[user].y, users[user].x]);
+
 	for (var i = 0; i < walls.length; i++) {
-		transform = [0, 0];
-		lines = wallLines(walls[i][0], walls[i][1]);
 		if (dxa == 1000000 && dya == 1000000) {
 			dy = cell[0] - walls[i][0];
 			dx = cell[1] - walls[i][1];
 		}
 		else {
-			dx = dxa;
 			dy = dya;
+			dx = dxa;
 		}
-		// given a wall, take every point on tank and line on wall and find minimum translation of point on tank such that the point is outside of the wall given direction [dy, dx]
-		for (var j = 0; j < points.length; j++) {
-			dist = [1000000*dy, 1000000*dx];
-			// given a point, find the minimum translation in given direction [dy, dx] for point to be outside of wall
-			for (var k = 0; k < 4; k++) {
-				point = lineIntersection(points[j], [points[j][0] + dy, points[j][1] + dx], lines[k][0], lines[k][1]);
-				if (point == null) {
-					continue;
-				}
-				tempDist = [point[0] - points[j][0], point[1] - points[j][1]];
-				if (point == null || !between(point, lines[k][0], lines[k][1])) {
-					continue;
-				}
-				tempDist = [point[0] - points[j][0], point[1] - points[j][1]];
-				console.log('tempDist: ' + tempDist);
-				if (vecRatio(tempDist, [dy, dx]) <= vecRatio(dist, [dy, dx]) && vecRatio(tempDist, [dy, dx]) >= 0) {
-					dist = tempDist;
-				}
-			}
-			console.log('dist: ' + dist);
-			if (dotProduct(dist, dist) > dotProduct(transform, transform) && validMove(dist)) {
-				transform = dist;
-			}
+		wpoints = wallPoints(walls[i][0], walls[i][1]);
+		segments = convertToSeg(wpoints);
+		transform = shiftPoints(segments, points, dy, dx);
+		console.log('transform normal: ' + transform);
+		if (dotProduct(transform, transform) > dotProduct(finalTransform, finalTransform) && validMove(transform)) {
+			finalTransform = transform;
 		}
-		console.log('transform: ' + transform);
+		transform = shiftPoints(convertToSeg(points), wpoints, -dy, -dx);
+		transform = [-transform[0], -transform[1]];
+		console.log('transform opposite: ' + transform);
 		if (dotProduct(transform, transform) > dotProduct(finalTransform, finalTransform) && validMove(transform)) {
 			finalTransform = transform;
 		}
 	}
-	console.log('final: ' + finalTransform);
+	console.log('finalTransform: ' + finalTransform);
 	return finalTransform;
 }
 
@@ -271,34 +285,6 @@ function updateTankRotation(user) {
 	else {
 		return;
 	}
-	/*var t1 = shiftTank(user, Math.cos(users[user].angle), -Math.sin(users[user].angle));
-	var t2 = shiftTank(user, -Math.cos(users[user].angle), Math.sin(users[user].angle));
-	var t3 = shiftTank(user, Math.cos(users[user].angle), Math.sin(users[user].angle));
-	var t4 = shiftTank(user, -Math.cos(users[user].angle), -Math.sin(users[user].angle));
-	var dp1 = dotProduct(t1, t1);
-	var dp2 = dotProduct(t2, t2);
-	var dp3 = dotProduct(t3, t3);
-	var dp4 = dotProduct(t4, t4);
-	if (dp1 != 0 && (dp1 <= dp2 || dp2 == 0) && (dp1 <= dp3 || dp3 == 0) && (dp1 <= dp4 || dp4 == 0)) {
-		users[user].y += t1[0];
-		users[user].x += t1[1];
-		//console.log(t1);
-	}
-	else if (dp2 != 0 && (dp2 <= dp3 || dp3 == 0) && (dp2 <= dp4 || dp4 == 0)) {
-		users[user].y += t2[0];
-		users[user].x += t2[1];
-		//console.log(t2);
-	}
-	else if (dp3 != 0 && (dp3 <= dp4 || dp4 == 0)) {
-		users[user].y += t3[0];
-		users[user].x += t3[1];
-		//console.log(t3);
-	}
-	else {
-		users[user].y += t4[0];
-		users[user].x += t4[1];
-		//console.log(t4);
-	}*/
 	var t = shiftTank(user, 1000000, 1000000);
 	users[user].y += t[0];
 	users[user].x += t[1];
