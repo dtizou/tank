@@ -17,6 +17,9 @@ var wallWidth = 8;
 var cellWidth = (canvasSize[1] - (mazeDimensions[1] + 1) * wallWidth) / mazeDimensions[1];
 var cellHeight = (canvasSize[0] - (mazeDimensions[0] + 1) * wallWidth) / mazeDimensions[0];
 
+// for rounding issues
+const c0 = 0.000001;
+
 setInterval(updateTanks, 25);
 
 function init(socket, username, color) {
@@ -71,43 +74,25 @@ function dotProduct(v1, v2) {
 	return v1[0] * v2[0] + v1[1] * v2[1];
 }
 
-/*
-function lineIntersection(p1, v, p2, p3)
-returns intersection of line through p1 and vector v for direction (slope = v[0] / v[1]) and line through p2 and p3
-all variables coordinates in the form [y, x]
-if no intersection (ie slopes are equal and p1 isn't on line through p2 and p3) return null
-otherwise return coordinates in the form [y, x]
-
-function below used different form for wall line
- */
-
-function lineIntersection(p, v, wall) {
-	if (wall[0] == 'x') {
-		if (v[1] == 0) {
-			if (p[1] == wall[1]) {
-				return p;
-			}
-			return null;
-		}
-		return [(wall[1] - p[1]) * v[0] / v[1] + p[0], wall[1]];
-	}
-	if (v[0] == 0) {
-		if (p[0] == wall[1]) {
-			return p;
-		}
+// intersection of line defined by points p1,p2 and p3,p4
+function lineIntersection(p1, p2, p3, p4) {
+	var denom = (p1[1] - p2[1]) * (p3[0] - p4[0]) - (p1[0] - p2[0]) * (p3[1] - p4[1]);
+	if (denom == 0) {
 		return null;
 	}
-	return [wall[1], (wall[1] - p[0]) * v[1] / v[0] + p[1]];
+	return [((p1[1] * p2[0] - p1[0] * p2[1]) * (p3[0] - p4[0]) - (p1[0] - p2[0]) * (p3[1] * p4[0] - p3[0] * p4[1])) / denom, ((p1[1] * p2[0] - p1[0] * p2[1]) * (p3[1] - p4[1]) - (p1[1] - p2[1]) * (p3[1] * p4[0] - p3[0] * p4[1])) / denom];
 }
 
-// a is between b and c
+// point a between b and c
+// c0 is for rounding issues
 function between(a, b, c) {
-	return (a >= b && a <= c) || (a <= b && a >= c);
+	return ((a[0] >= b[0] - c0 && a[0] <= c[0] + c0) || (a[0] <= b[0] + c0 && a[0] >= c[0] - c0)) && ((a[1] >= b[1] - c0 && a[1] <= c[1] + c0) || (a[1] <= b[1] + c0 && a[1] >= c[1] - c0));
 }
 
 // ratio of v1 to v2
+// c0 is for rounding issues
 function vecRatio(v1, v2) {
-	if (Math.abs(v2[0]) < 0.00000001) {
+	if (Math.abs(v2[0]) < c0) {
 		return v1[1] / v2[1];
 	}
 	return v1[0] / v2[0];
@@ -137,20 +122,29 @@ function isWall(y, x) {
 	}
 }
 
-// returns lines containing wall, lines in the form of [0] = x/y, x/y = [1], y/x = [[2], [3]]
-function wallLines(y, x) {
+// returns point for vertices of wall in order
+function wallPoints(y, x) {
 	if (y % 1 != 0) {
-		return [['x', x * (cellWidth + wallWidth), (y+0.5) * (cellHeight + wallWidth), (y+0.5) * (cellHeight + wallWidth) + wallWidth],
-			['x', x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth, (y+0.5) * (cellHeight + wallWidth), (y+0.5) * (cellHeight + wallWidth) + wallWidth],
-			['y', (y+0.5) * (cellHeight + wallWidth), x * (cellWidth + wallWidth), x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth],
-			['y', (y+0.5) * (cellHeight + wallWidth) + wallWidth, x * (cellWidth + wallWidth), x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth]];
+		return [[(y+0.5) * (cellHeight + wallWidth), x * (cellWidth + wallWidth)],
+			[(y+0.5) * (cellHeight + wallWidth) + wallWidth, x * (cellWidth + wallWidth)],
+			[(y+0.5) * (cellHeight + wallWidth) + wallWidth, x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth],
+			[(y+0.5) * (cellHeight + wallWidth), x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth]];
 	}
 	else {
-		return [['y', y * (cellHeight + wallWidth), (x+0.5) * (cellWidth + wallWidth), (x+0.5) * (cellWidth + wallWidth) + wallWidth],
-			['y', y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth, (x+0.5) * (cellWidth + wallWidth), (x+0.5) * (cellWidth + wallWidth) + wallWidth],
-			['x', (x+0.5) * (cellWidth + wallWidth), y * (cellHeight + wallWidth), y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth],
-			['x', (x+0.5) * (cellWidth + wallWidth) + wallWidth, y * (cellHeight + wallWidth), y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth]];
+		return [[y * (cellHeight + wallWidth), (x+0.5) * (cellWidth + wallWidth)],
+			[y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth, (x+0.5) * (cellWidth + wallWidth)],
+			[y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth, (x+0.5) * (cellWidth + wallWidth) + wallWidth],
+			[y * (cellHeight + wallWidth), (x+0.5) * (cellWidth + wallWidth) + wallWidth]];
 	}
+}
+
+// returns lines containing wall, lines in the form of [0] = x/y, x/y = [1], y/x = [[2], [3]]
+function wallLines(y, x) {
+	var p = wallPoints(y, x);
+	return [[p[0], p[1]],
+		[p[1], p[2]],
+		[p[2], p[3]],
+		[p[3], p[0]]];
 }
 
 // return transformation that needs to be applied to tank
@@ -212,37 +206,32 @@ function shiftTank(user, dy, dx) {
 			dist = [1000000*dy, 1000000*dx];
 			// given a point, find the minimum translation in given direction [dy, dx] for point to be outside of wall
 			for (var k = 0; k < 4; k++) {
-				point = lineIntersection(points[j], [dy, dx], lines[k]);
+				point = lineIntersection(points[j], [points[j][0] + dy, points[j][1] + dx], lines[k][0], lines[k][1]);
 				if (point == null) {
 					continue;
 				}
-				if (lines[k][0] == 'x') {
-					if (!between(point[0], lines[k][2], lines[k][3])) {
-						continue;
-					}
-				}
-				else {
-					if (!between(point[1], lines[k][2], lines[k][3])) {
-						continue;
-					}
+				tempDist = [point[0] - points[j][0], point[1] - points[j][1]];
+				console.log('before: ' + tempDist);
+				if (point == null || !between(point, lines[k][0], lines[k][1])) {
+					continue;
 				}
 				tempDist = [point[0] - points[j][0], point[1] - points[j][1]];
-				//console.log(tempDist);
+				console.log('tempDist: ' + tempDist);
 				if (vecRatio(tempDist, [dy, dx]) <= vecRatio(dist, [dy, dx]) && vecRatio(tempDist, [dy, dx]) >= 0) {
 					dist = tempDist;
 				}
 			}
-			//console.log('dist: ' + dist);
+			console.log('dist: ' + dist);
 			if (dotProduct(dist, dist) > dotProduct(transform, transform) && validMove(dist)) {
 				transform = dist;
 			}
 		}
-		//console.log('transform: ' + transform);
+		console.log('transform: ' + transform);
 		if (dotProduct(transform, transform) > dotProduct(finalTransform, finalTransform) && validMove(transform)) {
 			finalTransform = transform;
 		}
 	}
-	//console.log('final: ' + finalTransform);
+	console.log('final: ' + finalTransform);
 	return finalTransform;
 }
 
