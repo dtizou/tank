@@ -26,6 +26,7 @@
 </div>
 <canvas id="mazeCanvas" style="z-index: 0"></canvas>
 <canvas id="tankCanvas" style="z-index: 1"></canvas>
+<canvas id="bulletCanvas" style="z-index: 2"></canvas>
 <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
 <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
 <script>
@@ -34,8 +35,10 @@
 	var canvasWidth, canvasHeight;
 	var mazeCanvas = document.getElementById('mazeCanvas');
 	var tankCanvas = document.getElementById('tankCanvas');
+	var bulletCanvas = document.getElementById('bulletCanvas');
 	var mazeCtx = mazeCanvas.getContext('2d');
 	var tankCtx = tankCanvas.getContext('2d');
+	var bulletCtx = bulletCanvas.getContext('2d');
 	var isInit = false;
 
 	//Submit username
@@ -90,6 +93,8 @@
 			case 83:
 				socket.emit('releaseDown');
 				break;
+			case 32:
+				socket.emit('shoot');
 		}
 	}, false);
 
@@ -100,6 +105,8 @@
 		mazeCanvas.height = canvasHeight;
 		tankCanvas.width = canvasWidth;
 		tankCanvas.height = canvasHeight;
+		bulletCanvas.width = canvasWidth;
+		bulletCanvas.height = canvasHeight
 	});
 
 	//Redraws the new tank positions
@@ -111,7 +118,7 @@
 		tankCtx.beginPath();
 		for (var user in users) {
 			if (users.hasOwnProperty(user)) {
-				var w = users[user].width, h = users[user].height, cos = Math.cos(1.178), sin = Math.sin(1.178);
+				var w = users[user].width, h = users[user].height, cos = Math.cos(67.5 / 180 * Math.PI), sin = Math.sin(67.5 / 180 * Math.PI);
 				tankCtx.fillStyle = users[user].randColor;
 				tankCtx.fillStyle = users[user].color;
 				tankCtx.translate(users[user].x, users[user].y);
@@ -120,22 +127,22 @@
 				tankCtx.strokeRect(-h*0.5, -w*0.25, h, w*0.75);
 				tankCtx.fillRect(-h*0.625, -w*0.5, h*1.25, w*0.25);
 				tankCtx.strokeRect(-h*0.625, -w*0.5, h*1.25, w*0.25);
-                tankCtx.fillRect(-h/2 - h*0.125, w*0.5, h*1.25, w*0.25);
+				tankCtx.fillRect(-h/2 - h*0.125, w*0.5, h*1.25, w*0.25);
 				tankCtx.strokeRect(-h/2 - h*0.125, w*0.5, h*1.25, w*0.25);
 				tankCtx.fillStyle = '#990000';
-			  	tankCtx.fillRect(-h/ 6, w/32, 5 * h/5, w / 6);
+				tankCtx.fillRect(-h/ 6, w/32, 5 * h/5, w / 6);
 				tankCtx.strokeRect(-h/ 6, w/32, 5 * h/5, w / 6);
 				tankCtx.fillStyle = '#990000';
 				tankCtx.beginPath();
-                tankCtx.moveTo(-h/6 - sin*h/4 + h/8, w/8 - cos*h/4);
-                tankCtx.lineTo(-h/6 - sin*h/4 + h/8, w/8 + cos*h/4);
-                tankCtx.lineTo(-h/6 - cos*h/4 + h/8, w/8 + sin*h/4);
-                tankCtx.lineTo(-h/6 + cos*h/4 + h/8, w/8 + sin*h/4);
-                tankCtx.lineTo(-h/6 + sin*h/4 + h/8, w/8 + cos*h/4);
-                tankCtx.lineTo(-h/6 + sin*h/4 + h/8, w/8 - cos*h/4);
-                tankCtx.lineTo(-h/6 + cos*h/4 + h/8, w/8 - sin*h/4);
-                tankCtx.lineTo(-h/6 - cos*h/4 + h/8, w/8 - sin*h/4);
-                tankCtx.lineTo(-h/6 - sin*h/4 + h/8, w/8 - cos*h/4);
+				tankCtx.moveTo(-h/6 - sin*h/4 + h/8, w/8 - cos*h/4);
+				tankCtx.lineTo(-h/6 - sin*h/4 + h/8, w/8 + cos*h/4);
+				tankCtx.lineTo(-h/6 - cos*h/4 + h/8, w/8 + sin*h/4);
+				tankCtx.lineTo(-h/6 + cos*h/4 + h/8, w/8 + sin*h/4);
+				tankCtx.lineTo(-h/6 + sin*h/4 + h/8, w/8 + cos*h/4);
+				tankCtx.lineTo(-h/6 + sin*h/4 + h/8, w/8 - cos*h/4);
+				tankCtx.lineTo(-h/6 + cos*h/4 + h/8, w/8 - sin*h/4);
+				tankCtx.lineTo(-h/6 - cos*h/4 + h/8, w/8 - sin*h/4);
+				tankCtx.lineTo(-h/6 - sin*h/4 + h/8, w/8 - cos*h/4);
 				tankCtx.stroke();
 				tankCtx.fill();
 
@@ -180,7 +187,7 @@
 				tankCtx.lineWidth = 1;
 				tankCtx.strokeStyle = 'black';
 				tankCtx.stroke();
-                tankCtx.rotate(-users[user].angle);
+				tankCtx.rotate(-users[user].angle);
 				tankCtx.translate(-users[user].x, -users[user].y);
 				tankCtx.fillStyle = 'black';
 				tankCtx.font = '12px Arial';
@@ -188,6 +195,24 @@
 			}
 		}
 		tankCtx.closePath();
+	});
+
+	//Redraws the new bullet positions
+	socket.on('drawBullets', function (users) {
+		if (!isInit) {
+			return;
+		}
+		bulletCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+		for (var user in users) {
+			if (users.hasOwnProperty(user)) {
+				for (var i = 0; i < users[user].bullets.length; i++) {
+					bulletCtx.beginPath();
+					bulletCtx.arc(users[user].bullets[i].x, users[user].bullets[i].y, users[user].bullets[i].radius, 0, 2 * Math.PI, true);
+					bulletCtx.fill();
+					bulletCtx.closePath();
+				}
+			}
+		}
 	});
 
 	//Draws the maze

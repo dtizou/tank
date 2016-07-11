@@ -16,11 +16,14 @@ var rotSpeed = 5 * Math.PI / 180;
 var wallWidth = 8;
 var cellWidth = (canvasSize[1] - (mazeDimensions[1] + 1) * wallWidth) / mazeDimensions[1];
 var cellHeight = (canvasSize[0] - (mazeDimensions[0] + 1) * wallWidth) / mazeDimensions[0];
+var maxBullets = 5;
+var bulletRadius = 2;
+var bulletSpeed = 8;
 
 // for rounding issues
 const c0 = 0.000001;
 
-setInterval(updateTanks, 25);
+setInterval(update, 25);
 
 function init(socket, username, color) {
 	users[socket.id] = {
@@ -35,7 +38,8 @@ function init(socket, username, color) {
 		down: false,
 		color: color,
 		randColor: getRandomColor(),
-		username: username
+		username: username,
+		bullets: []
 	};
 	setCanvasSize();
 	drawMaze();
@@ -58,8 +62,31 @@ function updateTanks() {
 	drawTanks();
 }
 
+function updateBullets() {
+	for (var user in users) {
+		for (var i = 0; i < users[user].bullets.length; i++) {
+			users[user].bullets[i].y += Math.sin(users[user].bullets[i].angle) * users[user].bullets[i].speed;
+			users[user].bullets[i].x += Math.cos(users[user].bullets[i].angle) * users[user].bullets[i].speed;
+			if (users[user].bullets[i].y >= canvasSize[0] + users[user].bullets[i].radius || users[user].bullets[i].y <= -users[user].bullets[i].radius || users[user].bullets[i].x >= canvasSize[1] + users[user].bullets[i].radius || users[user].bullets[i].x <= -users[user].bullets[i].radius) {
+				users[user].bullets.splice(i, 1);
+				i--;
+			}
+		}
+	}
+	drawBullets();
+}
+
+function update() {
+	updateTanks();
+	updateBullets();
+}
+
 function drawTanks() {
 	io.emit('drawTanks', users);
+}
+
+function drawBullets() {
+	io.emit('drawBullets', users);
 }
 
 function drawMaze() {
@@ -100,7 +127,7 @@ function vecRatio(v1, v2) {
 
 // translation is too much
 function validMove(t) {
-	return (Math.abs(t[0]) <= speed) && (Math.abs(t[1]) <= speed);
+	return (Math.abs(t[0]) <= speed * (1 + c0)) && (Math.abs(t[1]) <= speed * (1 + c0));
 }
 
 // checks if coords are located at wall
@@ -195,6 +222,12 @@ function shiftPoints(segments, points, dy, dx) {
 			transform = dist;
 		}
 	}
+	if (Math.abs(transform[0]) < c0) {
+		transform[0] = 0;
+	}
+	if (Math.abs(transform[1]) < c0) {
+		transform[1] = 0;
+	}
 	return transform;
 }
 
@@ -246,7 +279,7 @@ function shiftTank(user, dya, dxa) { //dya and dxa are temporary values that may
 		}
 	}
 
-	var finalTransform = [0, 0], transform, dy, dx, wpoints, segments, cell = getCell([users[user].y, users[user].x]);
+	var finalTransform = [0, 0], transform, dy, dx, wpoints, segments, cell = getCell([users[user].y, users[user].x]), direction;
 
 	for (var i = 0; i < walls.length; i++) {
 		if (dxa == 1000000 && dya == 1000000) {
@@ -258,20 +291,24 @@ function shiftTank(user, dya, dxa) { //dya and dxa are temporary values that may
 			dx = dxa;
 		}
 		wpoints = wallPoints(walls[i][0], walls[i][1]);
+		direction = [(wpoints[0][0] + wpoints[2][0]) / 2 - users[user].y, (wpoints[0][1] + wpoints[2][1]) / 2 - users[user].x];
+		if (dotProduct(direction, [dy, dx]) > c0) {
+			continue;
+		}
 		segments = convertToSeg(wpoints);
 		transform = shiftPoints(segments, points, dy, dx);
-		console.log('transform normal: ' + transform);
+		//console.log('transform normal: ' + transform);
 		if (dotProduct(transform, transform) > dotProduct(finalTransform, finalTransform) && validMove(transform)) {
 			finalTransform = transform;
 		}
 		transform = shiftPoints(convertToSeg(points), wpoints, -dy, -dx);
 		transform = [-transform[0], -transform[1]];
-		console.log('transform opposite: ' + transform);
+		//console.log('transform opposite: ' + transform);
 		if (dotProduct(transform, transform) > dotProduct(finalTransform, finalTransform) && validMove(transform)) {
 			finalTransform = transform;
 		}
 	}
-	console.log('finalTransform: ' + finalTransform);
+	//console.log('finalTransform: ' + finalTransform);
 	return finalTransform;
 }
 
@@ -288,6 +325,10 @@ function updateTankRotation(user) {
 	var t = shiftTank(user, 1000000, 1000000);
 	users[user].y += t[0];
 	users[user].x += t[1];
+	t = shiftTank(user, 1000000, 1000000);
+	users[user].y += t[0];
+	users[user].x += t[1];
+	console.log('rotation: ' + shiftTank(user, 1000000, 1000000));
 }
 
 function updateTankMovement(user) {
@@ -310,11 +351,26 @@ function updateTankMovement(user) {
 	var t = shiftTank(user, dy, dx);
 	users[user].y += t[0];
 	users[user].x += t[1];
+	t = shiftTank(user, 1000000, 1000000);
+	users[user].y += t[0];
+	users[user].x += t[1];
+	console.log('move: ' + shiftTank(user, 1000000, 1000000));
 }
 
 function updateTank(user) {
 	updateTankRotation(user);
 	updateTankMovement(user);
+}
+
+function createBullet(user) {
+	if (users[user].bullets.length >= maxBullets) {
+		return;
+	}
+	users[user].bullets.push({'y': users[user].y + (bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
+		'x': users[user].x + (bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
+		'angle': users[user].angle,
+		'speed': bulletSpeed,
+		'radius': bulletRadius});
 }
 
 io.on('connection', function (socket) {
@@ -351,6 +407,10 @@ io.on('connection', function (socket) {
 	});
 	socket.on('releaseDown', function () {
 		users[socket.id].down = false;
+	});
+
+	socket.on('shoot', function() {
+		createBullet(socket.id);
 	});
 
 	//Remove tank on disconnect
