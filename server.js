@@ -144,13 +144,63 @@ function updateBullets() {
 			updateBulletAngle(users[user].bullets[i]);
 			users[user].bullets[i].y += Math.sin(users[user].bullets[i].angle) * users[user].bullets[i].speed;
 			users[user].bullets[i].x += Math.cos(users[user].bullets[i].angle) * users[user].bullets[i].speed;
-			if (users[user].bullets[i].y >= canvasSize[0] + users[user].bullets[i].radius || users[user].bullets[i].y <= -users[user].bullets[i].radius || users[user].bullets[i].x >= canvasSize[1] + users[user].bullets[i].radius || users[user].bullets[i].x <= -users[user].bullets[i].radius) {
+			users[user].bullets[i].time++;
+			if (users[user].bullets[i].y >= canvasSize[0] + users[user].bullets[i].radius || users[user].bullets[i].y <= -users[user].bullets[i].radius || users[user].bullets[i].x >= canvasSize[1] + users[user].bullets[i].radius || users[user].bullets[i].x <= -users[user].bullets[i].radius || users[user].bullets[i].time >= 400) {
 				users[user].bullets.splice(i, 1);
 				i--;
 			}
 		}
 	}
 	drawBullets();
+}
+
+// distance from point p1 to segment with endpoints p2, p3
+function distancePL(p1, p2, p3) {
+	var v1 = [p1[0] - p3[0], p1[1] - p3[1]];
+	var v2 = [p2[0] - p3[0], p2[1] - p3[1]];
+	var coef = (v1[0] * v2[0] + v1[1] * v2[1]) / (v2[0] * v2[0] + v2[1] * v2[1]);
+	var denom = Math.sqrt((p3[0] - p2[0]) * (p3[0] - p2[0]) + (p2[1] - p3[1]) * (p2[1] - p3[1]));
+	if (between([v2[0] * coef + p3[0], v2[1] * coef + p3[1]], p2, p3) && denom != 0) {
+		return Math.abs(((p3[0] - p2[0]) * p1[1] + (p2[1] - p3[1]) * p1[0] + p3[1] * p2[0] - p2[1] * p3[0]) / denom);
+	}
+	var dist1 = pointDist(p1, p2);
+	var dist2 = pointDist(p1, p3);
+	return (dist1 < dist2) ? dist1 : dist2;
+}
+
+function destroyTanks() {
+	var destroyBullet, destroyTank;
+	for (var user in users) {
+		destroyTank = false;
+		// variables used to compute location of points on rectangle
+		var vAngle = Math.atan(users[user].width / users[user].height);
+		var vDist = Math.sqrt(users[user].width * users[user].width + users[user].height * users[user].height) / 2;
+		// points on tank for checking collision (in the form (y, x))
+		var points = [[Math.sin(users[user].angle + vAngle) * vDist + users[user].y, Math.cos(users[user].angle + vAngle) * vDist + users[user].x],
+			[Math.sin(users[user].angle - vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle - vAngle + Math.PI) * vDist + users[user].x],
+			[Math.sin(users[user].angle + vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle + vAngle + Math.PI) * vDist + users[user].x],
+			[Math.sin(users[user].angle - vAngle) * vDist + users[user].y, Math.cos(users[user].angle - vAngle) * vDist + users[user].x]];
+		var tlines = convertToSeg(points);
+		for (var userb in users) {
+			for (var i = 0; i < users[userb].bullets.length; i++) {
+				destroyBullet = false;
+				for (var j = 0; j < tlines.length; j++) {
+					if (distancePL([users[userb].bullets[i].y, users[userb].bullets[i].x], tlines[j][0], tlines[j][1]) <= users[userb].bullets[i].radius && !(user == userb && users[userb].bullets[i].time <= 1)) {
+						destroyTank = true;
+						destroyBullet = true;
+						break;
+					}
+				}
+				if (destroyBullet) {
+					users[userb].bullets.splice(i, 1);
+					i--;
+				}
+			}
+		}
+		if (destroyTank) {
+			delete users[user];
+		}
+	}
 }
 
 function updateExplosions() {
@@ -166,6 +216,7 @@ function updateExplosions() {
 function update() {
 	updateTanks();
 	updateBullets();
+	destroyTanks();
 	updateExplosions();
 }
 
@@ -460,7 +511,9 @@ function createBullet(user) {
 		'x': users[user].x + (-bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
 		'angle': users[user].angle,
 		'speed': bulletSpeed,
-		'radius': bulletRadius});
+		'radius': bulletRadius,
+		'color': users[user].color,
+		'time': 0});
 }
 
 function createExplosion(user) {
@@ -475,41 +528,61 @@ io.on('connection', function (socket) {
 
 	//Receiving events
 	socket.on('pressLeft', function () {
-		users[socket.id].left = true;
-		users[socket.id].right = false;
+		if (users.hasOwnProperty(socket.id)) {
+			users[socket.id].left = true;
+			users[socket.id].right = false;
+		}
 	});
 	socket.on('pressRight', function () {
-		users[socket.id].right = true;
-		users[socket.id].left = false;
+		if (users.hasOwnProperty(socket.id)) {
+			users[socket.id].right = true;
+			users[socket.id].left = false;
+		}
 	});
 	socket.on('pressUp', function () {
-		users[socket.id].up = true;
-		users[socket.id].down = false;
+		if (users.hasOwnProperty(socket.id)) {
+			users[socket.id].up = true;
+			users[socket.id].down = false;
+		}
 	});
 	socket.on('pressDown', function () {
-		users[socket.id].down = true;
-		users[socket.id].up = false;
+		if (users.hasOwnProperty(socket.id)) {
+			users[socket.id].down = true;
+			users[socket.id].up = false;
+		}
 	});
 	socket.on('releaseLeft', function () {
-		users[socket.id].left = false;
+		if (users.hasOwnProperty(socket.id)) {
+			users[socket.id].left = false;
+		}
 	});
 	socket.on('releaseRight', function () {
-		users[socket.id].right = false;
+		if (users.hasOwnProperty(socket.id)) {
+			users[socket.id].right = false;
+		}
 	});
 	socket.on('releaseUp', function () {
-		users[socket.id].up = false;
+		if (users.hasOwnProperty(socket.id)) {
+			users[socket.id].up = false;
+		}
 	});
 	socket.on('releaseDown', function () {
-		users[socket.id].down = false;
+		if (users.hasOwnProperty(socket.id)) {
+			users[socket.id].down = false;
+		}
 	});
 
 	socket.on('shoot', function() {
-		createBullet(socket.id);
+		if (users.hasOwnProperty(socket.id)) {
+			createBullet(socket.id);
+		}
 	});
 
 	//Remove tank on disconnect
 	socket.on('disconnect', function () {
-		delete users[socket.id];
+		if (users.hasOwnProperty(socket.id)) {
+			delete users[socket.id];
+		}
 		drawTanks();
 	});
 });
