@@ -97,107 +97,43 @@ function updateBulletAngle(bullet) {
 		}
 	}
 
-	var wpoints, wlines, angle, center;
-	var xReflect, yReflect, wallOverlap, minDist = 1000000;
+	var wpoints, wlines, angle, center, intersection, before = [bullet.y - Math.sin(bullet.angle) * bullet.speed, bullet.x - Math.cos(bullet.angle) * bullet.speed], after = [bullet.y, bullet.x];
+	var xReflect = false, yReflect = false, minDist = 1000000;
 	for (var i = 0; i < walls.length; i++) {
 		wpoints = wallPoints(walls[i][0], walls[i][1]);
 		center = [(wpoints[0][0] + wpoints[2][0]) / 2, (wpoints[0][1] + wpoints[2][1]) / 2];
 		wlines = convertToSeg(wpoints);
-		wallOverlap = false;
-		for (var j = 0; j < wpoints.length; j++) {
-			if (pointDist(wpoints[j], [bullet.y, bullet.x]) <= bullet.radius) {
-				wallOverlap = true;
-			}
-		}
 		for (var j = 0; j < wlines.length; j++) {
-			if (j % 2 == 0 && Math.abs(wlines[j][0][1] - bullet.x) <= bullet.radius && ((bullet.y >= wlines[j][0][0] && bullet.y <= wlines[j][1][0]) || (bullet.y <= wlines[j][0][0] && bullet.y >= wlines[j][1][0]))) {
-				wallOverlap = true;
-			}
-			if (j % 2 == 1 && Math.abs(wlines[j][0][0] - bullet.y) <= bullet.radius && ((bullet.x >= wlines[j][0][1] && bullet.x <= wlines[j][1][1]) || (bullet.x <= wlines[j][0][1] && bullet.x >= wlines[j][1][1]))) {
-				wallOverlap = true;
-			}
-		}
-		if (!wallOverlap) {
-			continue;
-		}
-		//angle = Math.atan2(bullet.y - center[0], bullet.x - center[1]);
-		//console.log(bullet.x + ',' + bullet.y + ': ' + pointDist(center, [bullet.y, bullet.x]) + ' ' + minDist);
-		if (pointDist(center, [bullet.y, bullet.x] >= minDist + c0)) {
-			continue;
-		}
-		minDist = pointDist(center, [bullet.y, bullet.x]);
-		xReflect = false;
-		yReflect = false;
-		if (Math.sin(bullet.angle) >= 0 && Math.cos(bullet.angle) >= 0) {
-			// bounce left or up
-			if (Math.abs(wpoints[0][1] - bullet.x) <= Math.abs(wpoints[0][0] - bullet.y)) {
-				xReflect = true;
-			}
-			else {
-				yReflect = true;
+			intersection = lineIntersection(before, after, wlines[j][0], wlines[j][1]);
+			if (intersection != null && between(intersection, wlines[j][0], wlines[j][1]) && pointDist(intersection, before) < minDist) {
+				minDist = pointDist(intersection, before);
+				if (j == 0 && Math.cos(bullet.angle) >= 0) {
+					// left
+					xReflect = true;
+					yReflect = false;
+				}
+				if (j == 1 && Math.sin(bullet.angle) <= 0) {
+					// bottom
+					xReflect = false;
+					yReflect = true;
+				}
+				if (j == 2 && Math.cos(bullet.angle) <= 0) {
+					// right
+					xReflect = true;
+					yReflect = false;
+				}
+				if (j == 3 && Math.sin(bullet.angle) >= 0) {
+					// top
+					xReflect = false;
+					yReflect = true;
+				}
 			}
 		}
-		else if (Math.sin(bullet.angle) >= 0) {
-			// bounce right or up
-			if (Math.abs(wpoints[3][1] - bullet.x) <= Math.abs(wpoints[3][0] - bullet.y)) {
-				xReflect = true;
-			}
-			else {
-				yReflect = true;
-			}
-		}
-		else if (Math.cos(bullet.angle) >= 0) {
-			// bounce left or down
-			if (Math.abs(wpoints[2][1] - bullet.x) <= Math.abs(wpoints[2][0] - bullet.y)) {
-				xReflect = true;
-			}
-			else {
-				yReflect = true;
-			}
-		}
-		else {
-			// bounce right or down
-			if (Math.abs(wpoints[1][1] - bullet.x) <= Math.abs(wpoints[1][0] - bullet.y)) {
-				xReflect = true;
-			}
-			else {
-				yReflect = true;
-			}
-		}
-		/*if (angle >= Math.atan2(wpoints[3][0] - wpoints[1][0], wpoints[3][1] - wpoints[1][1]) && angle < Math.atan2(wpoints[2][0] - wpoints[0][0], wpoints[2][1] - wpoints[0][1])) {
-			// right
-			console.log('right');
-			if (Math.cos(bullet.angle) < 0) {
-				xReflect = true;
-			}
-		}
-		else if (angle >= Math.atan2(wpoints[2][0] - wpoints[0][0], wpoints[2][1] - wpoints[0][1]) && angle < Math.atan2(wpoints[1][0] - wpoints[3][0], wpoints[1][1] - wpoints[3][1])) {
-			// down
-			console.log('down');
-			if (Math.sin(bullet.angle) < 0) {
-				yReflect = true;
-			}
-		}
-		else if (angle >= Math.atan2(wpoints[0][0] - wpoints[2][0], wpoints[0][1] - wpoints[2][1]) && angle < Math.atan2(wpoints[3][0] - wpoints[1][0], wpoints[3][1] - wpoints[1][1])) {
-			// up
-			console.log('up');
-			if (Math.sin(bullet.angle) > 0) {
-				yReflect = true;
-			}
-		}
-		else {
-			// left
-			console.log('left');
-			if (Math.cos(bullet.angle) > 0) {
-				xReflect = true;
-			}
-		}
-		console.log(xReflect + ' ' + yReflect);*/
 	}
 	if (xReflect) {
 		bullet.angle = Math.PI - bullet.angle;
 	}
-	if (yReflect) {
+	else if (yReflect) {
 		bullet.angle = -bullet.angle;
 	}
 }
