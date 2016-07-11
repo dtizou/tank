@@ -198,6 +198,7 @@ function destroyTanks() {
 			}
 		}
 		if (destroyTank) {
+			createExplosion(user);
 			delete users[user];
 		}
 	}
@@ -206,8 +207,17 @@ function destroyTanks() {
 function updateExplosions() {
 	for (var i = 0; i < explosions.length; i++) {
 		for (var j = 0; j < explosions[i].length; j++) {
-			explosions[i][j].radius = (explosions[i][j].radius < 1) ? 0 : (explosions[i][j].radius - 1);
-			// all circles in explosion shrink by 1 px in radius
+			if (explosions[i][j].radius == 1) {
+				explosions[i].splice(j, 1);
+				j--;
+			}
+			else {
+				explosions[i][j].radius--;
+			}
+		}
+		if (explosions[i].length == 0) {
+			explosions.splice(i, 1);
+			i--;
 		}
 	}
 	drawExplosions();

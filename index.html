@@ -269,6 +269,7 @@
 		if (!isInit) {
 			return;
 		}
+		explosionCtx.clearRect(0, 0, canvasWidth, canvasHeight);
 		for (var i = 0; i < explosions.length; i++) {
 			for (var j = 0; j < explosions[i].length; j++) {
 				explosionCtx.beginPath();
