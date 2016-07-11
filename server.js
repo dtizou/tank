@@ -19,6 +19,7 @@ var cellHeight = (canvasSize[0] - (mazeDimensions[0] + 1) * wallWidth) / mazeDim
 var maxBullets = 5;
 var bulletRadius = 2;
 var bulletSpeed = 8;
+var explosions = [];
 
 // for rounding issues
 const c0 = 0.000001;
@@ -76,9 +77,20 @@ function updateBullets() {
 	drawBullets();
 }
 
+function updateExplosions() {
+	for (var i = 0; i < explosions.length; i++) {
+		for (var j = 0; j < explosions[i].length; j++) {
+			explosions[i][j].radius = (explosions[i][j].radius < 1) ? 0 : (explosions[i][j].radius - 1);
+			// all circles in explosion shrink by 1 px in radius
+		}
+	}
+	drawExplosions();
+}
+
 function update() {
 	updateTanks();
 	updateBullets();
+	updateExplosions();
 }
 
 function drawTanks() {
@@ -87,6 +99,10 @@ function drawTanks() {
 
 function drawBullets() {
 	io.emit('drawBullets', users);
+}
+
+function drawExplosions() {
+	io.emit('drawExplosions', explosions);
 }
 
 function drawMaze() {
@@ -371,6 +387,10 @@ function createBullet(user) {
 		'angle': users[user].angle,
 		'speed': bulletSpeed,
 		'radius': bulletRadius});
+}
+
+function createExplosion(user) {
+	explosions.push([{x: users[user].x, y: users[user].y, radius: 30, color: 'red'}]);
 }
 
 io.on('connection', function (socket) {

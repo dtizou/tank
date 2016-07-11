@@ -249,14 +249,20 @@
 	});
 
 	//Draws the explosions
-	socket.on('drawExplosion', function(explosions)) {
+	socket.on('drawExplosions', function(explosions) {
 		if (!isInit) {
 			return;
 		}
 		for (var i = 0; i < explosions.length; i++) {
-			//draw explosion[i] with parameters set in server
+			for (var j = 0; j < explosions[i].length; j++) {
+				explosionCtx.beginPath();
+				explosionCtx.fillStyle = explosions[i][j].color;
+				explosionCtx.arc(explosions[i][j].x, explosions[i][j].y, explosions[i][j].radius, 0, 2 * Math.PI, true);
+				explosionCtx.fill();
+				explosionCtx.closePath();
+			}
 		}
-	}
+	});
 
 	/*function Particle() {
 		this.scale = 1.0;
