@@ -17,8 +17,8 @@ var wallWidth = 8;
 var cellWidth = (canvasSize[1] - (mazeDimensions[1] + 1) * wallWidth) / mazeDimensions[1];
 var cellHeight = (canvasSize[0] - (mazeDimensions[0] + 1) * wallWidth) / mazeDimensions[0];
 var maxBullets = 5;
-var bulletRadius = 2;
-var bulletSpeed = 8;
+var bulletRadius = 3;
+var bulletSpeed = 5;
 var explosions = [];
 
 // for rounding issues
@@ -45,6 +45,8 @@ function init(socket, username, color) {
 	setCanvasSize();
 	drawMaze();
 	drawTanks();
+	drawBullets();
+	drawExplosions();
 }
 
 function getRandomColor() {
@@ -63,9 +65,103 @@ function updateTanks() {
 	drawTanks();
 }
 
+function pointDist(p1, p2) {
+	return Math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]));
+}
+
+function updateBulletAngle(bullet) {
+	// min/max x/y values for bullet
+	var minX = bullet.x - bullet.radius;
+	var maxX = bullet.x + bullet.radius;
+	var minY = bullet.y - bullet.radius;
+	var maxY = bullet.y + bullet.radius;
+
+	// get all walls that could overlap bullet
+	var lWall = Math.ceil((minX - wallWidth) / (cellWidth + wallWidth)) - 0.5;
+	var rWall = Math.floor(maxX / (cellWidth + wallWidth)) - 0.5;
+	var dWall = Math.ceil((minY - wallWidth) / (cellHeight + wallWidth)) - 0.5;
+	var uWall = Math.floor(maxY / (cellHeight + wallWidth)) - 0.5;
+	var walls = [];
+	for (var i = lWall; i <= rWall; i++) {
+		for (var j = dWall - 0.5; j <= uWall + 0.5; j++) {
+			if (isWall(j, i)) {
+				walls.push([j, i]);
+			}
+		}
+	}
+	for (var i = dWall; i <= uWall; i++) {
+		for (var j = lWall - 0.5; j <= rWall + 0.5; j++) {
+			if (isWall(i, j)) {
+				walls.push([i, j]);
+			}
+		}
+	}
+
+	var wpoints, wlines, angle, center;
+	var xReflect = false, yReflect = false, wallOverlap, minDist = 1000000;
+	for (var i = 0; i < walls.length; i++) {
+		wpoints = wallPoints(walls[i][0], walls[i][1]);
+		center = [(wpoints[0][0] + wpoints[2][0]) / 2, (wpoints[0][1] + wpoints[2][1]) / 2];
+		wlines = convertToSeg(wpoints);
+		wallOverlap = false;
+		for (var j = 0; j < wpoints.length; j++) {
+			if (pointDist(wpoints[j], [bullet.y, bullet.x]) <= bullet.radius) {
+				wallOverlap = true;
+			}
+		}
+		for (var j = 0; j < wlines.length; j++) {
+			if (j % 2 == 0 && Math.abs(wlines[j][0][1] - bullet.x) <= bullet.radius && ((bullet.y >= wlines[j][0][0] && bullet.y <= wlines[j][1][0]) || (bullet.y <= wlines[j][0][0] && bullet.y >= wlines[j][1][0]))) {
+				wallOverlap = true;
+			}
+			if (j % 2 == 1 && Math.abs(wlines[j][0][0] - bullet.y) <= bullet.radius && ((bullet.x >= wlines[j][0][1] && bullet.x <= wlines[j][1][1]) || (bullet.x <= wlines[j][0][1] && bullet.x >= wlines[j][1][1]))) {
+				wallOverlap = true;
+			}
+		}
+		if (!wallOverlap) {
+			continue;
+		}
+		angle = Math.atan2(bullet.y - center[0], bullet.x - center[1]);
+		if (pointDist(center, [bullet.y, bullet.x] >= minDist + c0)) {
+			continue;
+		}
+		minDist = pointDist(center, [bullet.y, bullet.x]);
+		if (angle >= Math.atan2(wpoints[3][0] - wpoints[1][0], wpoints[3][1] - wpoints[1][1]) && angle < Math.atan2(wpoints[2][0] - wpoints[0][0], wpoints[2][1] - wpoints[0][1])) {
+			// right
+			if (Math.cos(bullet.angle) < 0) {
+				xReflect = true;
+			}
+		}
+		else if (angle >= Math.atan2(wpoints[2][0] - wpoints[0][0], wpoints[2][1] - wpoints[0][1]) && angle < Math.atan2(wpoints[1][0] - wpoints[3][0], wpoints[1][1] - wpoints[3][1])) {
+			// down
+			if (Math.sin(bullet.angle) < 0) {
+				yReflect = true;
+			}
+		}
+		else if (angle >= Math.atan2(wpoints[0][0] - wpoints[2][0], wpoints[0][1] - wpoints[2][1]) && angle < Math.atan2(wpoints[3][0] - wpoints[1][0], wpoints[3][1] - wpoints[1][1])) {
+			// up
+			if (Math.sin(bullet.angle) > 0) {
+				yReflect = true;
+			}
+		}
+		else {
+			// left
+			if (Math.cos(bullet.angle) > 0) {
+				xReflect = true;
+			}
+		}
+	}
+	if (xReflect) {
+		bullet.angle = Math.PI - bullet.angle;
+	}
+	if (yReflect) {
+		bullet.angle = -bullet.angle;
+	}
+}
+
 function updateBullets() {
 	for (var user in users) {
 		for (var i = 0; i < users[user].bullets.length; i++) {
+			updateBulletAngle(users[user].bullets[i]);
 			users[user].bullets[i].y += Math.sin(users[user].bullets[i].angle) * users[user].bullets[i].speed;
 			users[user].bullets[i].x += Math.cos(users[user].bullets[i].angle) * users[user].bullets[i].speed;
 			if (users[user].bullets[i].y >= canvasSize[0] + users[user].bullets[i].radius || users[user].bullets[i].y <= -users[user].bullets[i].radius || users[user].bullets[i].x >= canvasSize[1] + users[user].bullets[i].radius || users[user].bullets[i].x <= -users[user].bullets[i].radius) {
@@ -344,7 +440,6 @@ function updateTankRotation(user) {
 	t = shiftTank(user, 1000000, 1000000);
 	users[user].y += t[0];
 	users[user].x += t[1];
-	console.log('rotation: ' + shiftTank(user, 1000000, 1000000));
 }
 
 function updateTankMovement(user) {
@@ -370,7 +465,6 @@ function updateTankMovement(user) {
 	t = shiftTank(user, 1000000, 1000000);
 	users[user].y += t[0];
 	users[user].x += t[1];
-	console.log('move: ' + shiftTank(user, 1000000, 1000000));
 }
 
 function updateTank(user) {
@@ -382,8 +476,8 @@ function createBullet(user) {
 	if (users[user].bullets.length >= maxBullets) {
 		return;
 	}
-	users[user].bullets.push({'y': users[user].y + (bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
-		'x': users[user].x + (bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
+	users[user].bullets.push({'y': users[user].y + (-bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
+		'x': users[user].x + (-bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
 		'angle': users[user].angle,
 		'speed': bulletSpeed,
 		'radius': bulletRadius});
