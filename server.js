@@ -214,7 +214,7 @@ function updateExplosions() {
 			i--;
 		}
 		else {
-			explosions[i].radius -= 1;
+			explosions[i].radius -= 0.8;
 			explosions[i].x += explosions[i].dx;
 			explosions[i].y += explosions[i].dy;
 		}
