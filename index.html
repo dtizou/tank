@@ -203,21 +203,17 @@
 	});
 
 	//Redraws the new bullet positions
-	socket.on('drawBullets', function (users) {
+	socket.on('drawBullets', function (bullets) {
 		if (!isInit) {
 			return;
 		}
 		bulletCtx.clearRect(0, 0, canvasWidth, canvasHeight);
-		for (var user in users) {
-			if (users.hasOwnProperty(user)) {
-				for (var i = 0; i < users[user].bullets.length; i++) {
-					bulletCtx.beginPath();
-					bulletCtx.fillStyle = users[user].bullets[i].color;
-					bulletCtx.arc(users[user].bullets[i].x, users[user].bullets[i].y, users[user].bullets[i].radius, 0, 2 * Math.PI, true);
-					bulletCtx.fill();
-					bulletCtx.closePath();
-				}
-			}
+		for (var i = 0; i < bullets.length; i++) {
+			bulletCtx.beginPath();
+			bulletCtx.fillStyle = bullets[i].color;
+			bulletCtx.arc(bullets[i].x, bullets[i].y, bullets[i].radius, 0, 2 * Math.PI, true);
+			bulletCtx.fill();
+			bulletCtx.closePath();
 		}
 	});
 

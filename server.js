@@ -19,6 +19,7 @@ var cellHeight = (canvasSize[0] - (mazeDimensions[0] + 1) * wallWidth) / mazeDim
 var maxBullets = 5;
 var bulletRadius = 3;
 var bulletSpeed = 5;
+var bullets = [];
 var explosions = [];
 
 // for rounding issues
@@ -40,7 +41,7 @@ function init(socket, username, color) {
 		color: color,
 		randColor: getRandomColor(),
 		username: username,
-		bullets: []
+		bullets: 0
 	};
 	setCanvasSize();
 	drawMaze();
@@ -139,16 +140,17 @@ function updateBulletAngle(bullet) {
 }
 
 function updateBullets() {
-	for (var user in users) {
-		for (var i = 0; i < users[user].bullets.length; i++) {
-			updateBulletAngle(users[user].bullets[i]);
-			users[user].bullets[i].y += Math.sin(users[user].bullets[i].angle) * users[user].bullets[i].speed;
-			users[user].bullets[i].x += Math.cos(users[user].bullets[i].angle) * users[user].bullets[i].speed;
-			users[user].bullets[i].time++;
-			if (users[user].bullets[i].y >= canvasSize[0] + users[user].bullets[i].radius || users[user].bullets[i].y <= -users[user].bullets[i].radius || users[user].bullets[i].x >= canvasSize[1] + users[user].bullets[i].radius || users[user].bullets[i].x <= -users[user].bullets[i].radius || users[user].bullets[i].time >= 400) {
-				users[user].bullets.splice(i, 1);
-				i--;
+	for (var i = 0; i < bullets.length; i++) {
+		updateBulletAngle(bullets[i]);
+		bullets[i].y += Math.sin(bullets[i].angle) * bullets[i].speed;
+		bullets[i].x += Math.cos(bullets[i].angle) * bullets[i].speed;
+		bullets[i].time++;
+		if (bullets[i].y >= canvasSize[0] + bullets[i].radius || bullets[i].y <= -bullets[i].radius || bullets[i].x >= canvasSize[1] + bullets[i].radius || bullets[i].x <= -bullets[i].radius || bullets[i].time >= 400) {
+			if (users.hasOwnProperty(bullets[i].user)) {
+				users[bullets[i].user].bullets--;
 			}
+			bullets.splice(i, 1);
+			i--;
 		}
 	}
 	drawBullets();
@@ -181,20 +183,18 @@ function destroyTanks() {
 			[Math.sin(users[user].angle + vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle + vAngle + Math.PI) * vDist + users[user].x],
 			[Math.sin(users[user].angle - vAngle) * vDist + users[user].y, Math.cos(users[user].angle - vAngle) * vDist + users[user].x]];
 		var tlines = convertToSeg(points);
-		for (var userb in users) {
-			for (var i = 0; i < users[userb].bullets.length; i++) {
-				destroyBullet = false;
-				for (var j = 0; j < tlines.length; j++) {
-					if (distancePL([users[userb].bullets[i].y, users[userb].bullets[i].x], tlines[j][0], tlines[j][1]) <= users[userb].bullets[i].radius && !(user == userb && users[userb].bullets[i].time <= 10)) {
-						destroyTank = true;
-						destroyBullet = true;
-						break;
-					}
+		for (var i = 0; i < bullets.length; i++) {
+			destroyBullet = false;
+			for (var j = 0; j < tlines.length; j++) {
+				if (distancePL([bullets[i].y, bullets[i].x], tlines[j][0], tlines[j][1]) <= bullets[i].radius && !(user == bullets[i].user && bullets[i].time <= 10)) {
+					destroyTank = true;
+					destroyBullet = true;
+					break;
 				}
-				if (destroyBullet) {
-					users[userb].bullets.splice(i, 1);
-					i--;
-				}
+			}
+			if (destroyBullet) {
+				bullets.splice(i, 1);
+				i--;
 			}
 		}
 		if (destroyTank) {
@@ -235,7 +235,7 @@ function drawTanks() {
 }
 
 function drawBullets() {
-	io.emit('drawBullets', users);
+	io.emit('drawBullets', bullets);
 }
 
 function drawExplosions() {
@@ -514,10 +514,11 @@ function updateTank(user) {
 }
 
 function createBullet(user) {
-	if (users[user].bullets.length >= maxBullets) {
+	if (users[user].bullets >= maxBullets) {
 		return;
 	}
-	users[user].bullets.push({
+	bullets.push({
+		user: user,
 		'y': users[user].y + (-bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
 		'x': users[user].x + (-bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
 		'angle': users[user].angle,
