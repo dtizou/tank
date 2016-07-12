@@ -13,25 +13,21 @@ var mazeDimensions = [7, 12]; //rows and cols
 var maze = mazeGen.generateMaze(mazeDimensions[0], mazeDimensions[1]);
 var speed = 4;
 var rotSpeed = 5 * Math.PI / 180;
-var wallWidth = 10;
+var wallWidth = 8;
 var cellWidth = (canvasSize[1] - (mazeDimensions[1] + 1) * wallWidth) / mazeDimensions[1];
 var cellHeight = (canvasSize[0] - (mazeDimensions[0] + 1) * wallWidth) / mazeDimensions[0];
-var maxBullets = 5;
-var bulletRadius = 3;
-var bulletSpeed = 5;
-var explosions = [];
 
 // for rounding issues
 const c0 = 0.000001;
 
-setInterval(update, 25);
+setInterval(updateTanks, 25);
 
 function init(socket, username, color) {
 	users[socket.id] = {
-		x: wallWidth + cellWidth / 2 + Math.floor(Math.random() * mazeDimensions[1]) * (wallWidth + cellWidth),
-		y: wallWidth + cellHeight / 2 + Math.floor(Math.random() * mazeDimensions[0]) * (wallWidth + cellHeight),
-		width: 30,
-		height: 40,
+		x: 38,
+		y: 33,
+		width: 36,
+		height: 48,
 		angle: 0,
 		left: false,
 		right: false,
@@ -39,14 +35,11 @@ function init(socket, username, color) {
 		down: false,
 		color: color,
 		randColor: getRandomColor(),
-		username: username,
-		bullets: []
+		username: username
 	};
 	setCanvasSize();
 	drawMaze();
 	drawTanks();
-	drawBullets();
-	drawExplosions();
 }
 
 function getRandomColor() {
@@ -65,181 +58,8 @@ function updateTanks() {
 	drawTanks();
 }
 
-function pointDist(p1, p2) {
-	return Math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]));
-}
-
-function updateBulletAngle(bullet) {
-	// min/max x/y values for bullet
-	var minX = bullet.x - bullet.radius;
-	var maxX = bullet.x + bullet.radius;
-	var minY = bullet.y - bullet.radius;
-	var maxY = bullet.y + bullet.radius;
-
-	// get all walls that could overlap bullet
-	var lWall = Math.ceil((minX - wallWidth) / (cellWidth + wallWidth)) - 0.5;
-	var rWall = Math.floor(maxX / (cellWidth + wallWidth)) - 0.5;
-	var dWall = Math.ceil((minY - wallWidth) / (cellHeight + wallWidth)) - 0.5;
-	var uWall = Math.floor(maxY / (cellHeight + wallWidth)) - 0.5;
-	var walls = [];
-	for (var i = lWall; i <= rWall; i++) {
-		for (var j = dWall - 0.5; j <= uWall + 0.5; j++) {
-			if (isWall(j, i)) {
-				walls.push([j, i]);
-			}
-		}
-	}
-	for (var i = dWall; i <= uWall; i++) {
-		for (var j = lWall - 0.5; j <= rWall + 0.5; j++) {
-			if (isWall(i, j)) {
-				walls.push([i, j]);
-			}
-		}
-	}
-
-	var wpoints, wlines, angle, center, intersection, before = [bullet.y - Math.sin(bullet.angle) * bullet.speed, bullet.x - Math.cos(bullet.angle) * bullet.speed], after = [bullet.y, bullet.x];
-	var xReflect = false, yReflect = false, minDist = 1000000;
-	for (var i = 0; i < walls.length; i++) {
-		wpoints = wallPoints(walls[i][0], walls[i][1]);
-		center = [(wpoints[0][0] + wpoints[2][0]) / 2, (wpoints[0][1] + wpoints[2][1]) / 2];
-		wlines = convertToSeg(wpoints);
-		for (var j = 0; j < wlines.length; j++) {
-			intersection = lineIntersection(before, after, wlines[j][0], wlines[j][1]);
-			if (intersection != null && between(intersection, wlines[j][0], wlines[j][1]) && pointDist(intersection, before) < minDist) {
-				minDist = pointDist(intersection, before);
-				if (j == 0 && Math.cos(bullet.angle) >= 0) {
-					// left
-					xReflect = true;
-					yReflect = false;
-				}
-				if (j == 1 && Math.sin(bullet.angle) <= 0) {
-					// bottom
-					xReflect = false;
-					yReflect = true;
-				}
-				if (j == 2 && Math.cos(bullet.angle) <= 0) {
-					// right
-					xReflect = true;
-					yReflect = false;
-				}
-				if (j == 3 && Math.sin(bullet.angle) >= 0) {
-					// top
-					xReflect = false;
-					yReflect = true;
-				}
-			}
-		}
-	}
-	if (xReflect) {
-		bullet.angle = Math.PI - bullet.angle;
-	}
-	else if (yReflect) {
-		bullet.angle = -bullet.angle;
-	}
-}
-
-function updateBullets() {
-	for (var user in users) {
-		for (var i = 0; i < users[user].bullets.length; i++) {
-			updateBulletAngle(users[user].bullets[i]);
-			users[user].bullets[i].y += Math.sin(users[user].bullets[i].angle) * users[user].bullets[i].speed;
-			users[user].bullets[i].x += Math.cos(users[user].bullets[i].angle) * users[user].bullets[i].speed;
-			users[user].bullets[i].time++;
-			if (users[user].bullets[i].y >= canvasSize[0] + users[user].bullets[i].radius || users[user].bullets[i].y <= -users[user].bullets[i].radius || users[user].bullets[i].x >= canvasSize[1] + users[user].bullets[i].radius || users[user].bullets[i].x <= -users[user].bullets[i].radius || users[user].bullets[i].time >= 400) {
-				users[user].bullets.splice(i, 1);
-				i--;
-			}
-		}
-	}
-	drawBullets();
-}
-
-// distance from point p1 to segment with endpoints p2, p3
-function distancePL(p1, p2, p3) {
-	var v1 = [p1[0] - p3[0], p1[1] - p3[1]];
-	var v2 = [p2[0] - p3[0], p2[1] - p3[1]];
-	var coef = (v1[0] * v2[0] + v1[1] * v2[1]) / (v2[0] * v2[0] + v2[1] * v2[1]);
-	var denom = Math.sqrt((p3[0] - p2[0]) * (p3[0] - p2[0]) + (p2[1] - p3[1]) * (p2[1] - p3[1]));
-	if (between([v2[0] * coef + p3[0], v2[1] * coef + p3[1]], p2, p3) && denom != 0) {
-		return Math.abs(((p3[0] - p2[0]) * p1[1] + (p2[1] - p3[1]) * p1[0] + p3[1] * p2[0] - p2[1] * p3[0]) / denom);
-	}
-	var dist1 = pointDist(p1, p2);
-	var dist2 = pointDist(p1, p3);
-	return (dist1 < dist2) ? dist1 : dist2;
-}
-
-function destroyTanks() {
-	var destroyBullet, destroyTank;
-	for (var user in users) {
-		destroyTank = false;
-		// variables used to compute location of points on rectangle
-		var vAngle = Math.atan(users[user].width / users[user].height);
-		var vDist = Math.sqrt(users[user].width * users[user].width + users[user].height * users[user].height) / 2;
-		// points on tank for checking collision (in the form (y, x))
-		var points = [[Math.sin(users[user].angle + vAngle) * vDist + users[user].y, Math.cos(users[user].angle + vAngle) * vDist + users[user].x],
-			[Math.sin(users[user].angle - vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle - vAngle + Math.PI) * vDist + users[user].x],
-			[Math.sin(users[user].angle + vAngle + Math.PI) * vDist + users[user].y, Math.cos(users[user].angle + vAngle + Math.PI) * vDist + users[user].x],
-			[Math.sin(users[user].angle - vAngle) * vDist + users[user].y, Math.cos(users[user].angle - vAngle) * vDist + users[user].x]];
-		var tlines = convertToSeg(points);
-		for (var userb in users) {
-			for (var i = 0; i < users[userb].bullets.length; i++) {
-				destroyBullet = false;
-				for (var j = 0; j < tlines.length; j++) {
-					if (distancePL([users[userb].bullets[i].y, users[userb].bullets[i].x], tlines[j][0], tlines[j][1]) <= users[userb].bullets[i].radius && !(user == userb && users[userb].bullets[i].time <= 1)) {
-						destroyTank = true;
-						destroyBullet = true;
-						break;
-					}
-				}
-				if (destroyBullet) {
-					users[userb].bullets.splice(i, 1);
-					i--;
-				}
-			}
-		}
-		if (destroyTank) {
-			createExplosion(user);
-			delete users[user];
-		}
-	}
-}
-
-function updateExplosions() {
-	for (var i = 0; i < explosions.length; i++) {
-		for (var j = 0; j < explosions[i].length; j++) {
-			if (explosions[i][j].radius == 1) {
-				explosions[i].splice(j, 1);
-				j--;
-			}
-			else {
-				explosions[i][j].radius--;
-			}
-		}
-		if (explosions[i].length == 0) {
-			explosions.splice(i, 1);
-			i--;
-		}
-	}
-	drawExplosions();
-}
-
-function update() {
-	updateTanks();
-	updateBullets();
-	destroyTanks();
-	updateExplosions();
-}
-
 function drawTanks() {
 	io.emit('drawTanks', users);
-}
-
-function drawBullets() {
-	io.emit('drawBullets', users);
-}
-
-function drawExplosions() {
-	io.emit('drawExplosions', explosions);
 }
 
 function drawMaze() {
@@ -280,7 +100,7 @@ function vecRatio(v1, v2) {
 
 // translation is too much
 function validMove(t) {
-	return (Math.abs(t[0]) <= speed * (1 + c0)) && (Math.abs(t[1]) <= speed * (1 + c0));
+	return (Math.abs(t[0]) <= speed) && (Math.abs(t[1]) <= speed);
 }
 
 // checks if coords are located at wall
@@ -375,12 +195,6 @@ function shiftPoints(segments, points, dy, dx) {
 			transform = dist;
 		}
 	}
-	if (Math.abs(transform[0]) < c0) {
-		transform[0] = 0;
-	}
-	if (Math.abs(transform[1]) < c0) {
-		transform[1] = 0;
-	}
 	return transform;
 }
 
@@ -432,7 +246,7 @@ function shiftTank(user, dya, dxa) { //dya and dxa are temporary values that may
 		}
 	}
 
-	var finalTransform = [0, 0], transform, dy, dx, wpoints, segments, cell = getCell([users[user].y, users[user].x]), direction;
+	var finalTransform = [0, 0], transform, dy, dx, wpoints, segments, cell = getCell([users[user].y, users[user].x]);
 
 	for (var i = 0; i < walls.length; i++) {
 		if (dxa == 1000000 && dya == 1000000) {
@@ -444,24 +258,20 @@ function shiftTank(user, dya, dxa) { //dya and dxa are temporary values that may
 			dx = dxa;
 		}
 		wpoints = wallPoints(walls[i][0], walls[i][1]);
-		direction = [(wpoints[0][0] + wpoints[2][0]) / 2 - users[user].y, (wpoints[0][1] + wpoints[2][1]) / 2 - users[user].x];
-		if (dotProduct(direction, [dy, dx]) > c0) {
-			continue;
-		}
 		segments = convertToSeg(wpoints);
 		transform = shiftPoints(segments, points, dy, dx);
-		//console.log('transform normal: ' + transform);
+		console.log('transform normal: ' + transform);
 		if (dotProduct(transform, transform) > dotProduct(finalTransform, finalTransform) && validMove(transform)) {
 			finalTransform = transform;
 		}
 		transform = shiftPoints(convertToSeg(points), wpoints, -dy, -dx);
 		transform = [-transform[0], -transform[1]];
-		//console.log('transform opposite: ' + transform);
+		console.log('transform opposite: ' + transform);
 		if (dotProduct(transform, transform) > dotProduct(finalTransform, finalTransform) && validMove(transform)) {
 			finalTransform = transform;
 		}
 	}
-	//console.log('finalTransform: ' + finalTransform);
+	console.log('finalTransform: ' + finalTransform);
 	return finalTransform;
 }
 
@@ -476,9 +286,6 @@ function updateTankRotation(user) {
 		return;
 	}
 	var t = shiftTank(user, 1000000, 1000000);
-	users[user].y += t[0];
-	users[user].x += t[1];
-	t = shiftTank(user, 1000000, 1000000);
 	users[user].y += t[0];
 	users[user].x += t[1];
 }
@@ -503,31 +310,11 @@ function updateTankMovement(user) {
 	var t = shiftTank(user, dy, dx);
 	users[user].y += t[0];
 	users[user].x += t[1];
-	t = shiftTank(user, 1000000, 1000000);
-	users[user].y += t[0];
-	users[user].x += t[1];
 }
 
 function updateTank(user) {
 	updateTankRotation(user);
 	updateTankMovement(user);
-}
-
-function createBullet(user) {
-	if (users[user].bullets.length >= maxBullets) {
-		return;
-	}
-	users[user].bullets.push({'y': users[user].y + (-bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
-		'x': users[user].x + (-bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
-		'angle': users[user].angle,
-		'speed': bulletSpeed,
-		'radius': bulletRadius,
-		'color': users[user].color,
-		'time': 0});
-}
-
-function createExplosion(user) {
-	explosions.push([{x: users[user].x, y: users[user].y, radius: 30, color: 'red'}]);
 }
 
 io.on('connection', function (socket) {
@@ -538,61 +325,37 @@ io.on('connection', function (socket) {
 
 	//Receiving events
 	socket.on('pressLeft', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			users[socket.id].left = true;
-			users[socket.id].right = false;
-		}
+		users[socket.id].left = true;
+		users[socket.id].right = false;
 	});
 	socket.on('pressRight', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			users[socket.id].right = true;
-			users[socket.id].left = false;
-		}
+		users[socket.id].right = true;
+		users[socket.id].left = false;
 	});
 	socket.on('pressUp', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			users[socket.id].up = true;
-			users[socket.id].down = false;
-		}
+		users[socket.id].up = true;
+		users[socket.id].down = false;
 	});
 	socket.on('pressDown', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			users[socket.id].down = true;
-			users[socket.id].up = false;
-		}
+		users[socket.id].down = true;
+		users[socket.id].up = false;
 	});
 	socket.on('releaseLeft', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			users[socket.id].left = false;
-		}
+		users[socket.id].left = false;
 	});
 	socket.on('releaseRight', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			users[socket.id].right = false;
-		}
+		users[socket.id].right = false;
 	});
 	socket.on('releaseUp', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			users[socket.id].up = false;
-		}
+		users[socket.id].up = false;
 	});
 	socket.on('releaseDown', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			users[socket.id].down = false;
-		}
-	});
-
-	socket.on('shoot', function() {
-		if (users.hasOwnProperty(socket.id)) {
-			createBullet(socket.id);
-		}
+		users[socket.id].down = false;
 	});
 
 	//Remove tank on disconnect
 	socket.on('disconnect', function () {
-		if (users.hasOwnProperty(socket.id)) {
-			delete users[socket.id];
-		}
+		delete users[socket.id];
 		drawTanks();
 	});
 });
