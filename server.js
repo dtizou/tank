@@ -185,7 +185,7 @@ function destroyTanks() {
 			for (var i = 0; i < users[userb].bullets.length; i++) {
 				destroyBullet = false;
 				for (var j = 0; j < tlines.length; j++) {
-					if (distancePL([users[userb].bullets[i].y, users[userb].bullets[i].x], tlines[j][0], tlines[j][1]) <= users[userb].bullets[i].radius && !(user == userb && users[userb].bullets[i].time <= 1)) {
+					if (distancePL([users[userb].bullets[i].y, users[userb].bullets[i].x], tlines[j][0], tlines[j][1]) <= users[userb].bullets[i].radius && !(user == userb && users[userb].bullets[i].time <= 10)) {
 						destroyTank = true;
 						destroyBullet = true;
 						break;
