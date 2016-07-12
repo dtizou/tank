@@ -259,13 +259,11 @@
 		}
 		explosionCtx.clearRect(0, 0, canvasWidth, canvasHeight);
 		for (var i = 0; i < explosions.length; i++) {
-			for (var j = 0; j < explosions[i].length; j++) {
-				explosionCtx.beginPath();
-				explosionCtx.fillStyle = explosions[i][j].color;
-				explosionCtx.arc(explosions[i][j].x, explosions[i][j].y, explosions[i][j].radius, 0, 2 * Math.PI, true);
-				explosionCtx.fill();
-				explosionCtx.closePath();
-			}
+			explosionCtx.beginPath();
+			explosionCtx.fillStyle = explosions[i].color;
+			explosionCtx.arc(explosions[i].x, explosions[i].y, explosions[i].radius, 0, 2 * Math.PI, true);
+			explosionCtx.fill();
+			explosionCtx.closePath();
 		}
 	});
 

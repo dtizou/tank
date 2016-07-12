@@ -209,18 +209,14 @@ function destroyTanks() {
 
 function updateExplosions() {
 	for (var i = 0; i < explosions.length; i++) {
-		for (var j = 0; j < explosions[i].length; j++) {
-			if (explosions[i][j].radius == 1) {
-				explosions[i].splice(j, 1);
-				j--;
-			}
-			else {
-				explosions[i][j].radius--;
-			}
-		}
-		if (explosions[i].length == 0) {
+		if (explosions[i].radius <= 1) {
 			explosions.splice(i, 1);
 			i--;
+		}
+		else {
+			explosions[i].radius -= 1;
+			explosions[i].x += explosions[i].dx;
+			explosions[i].y += explosions[i].dy;
 		}
 	}
 	drawExplosions();
@@ -523,18 +519,20 @@ function createBullet(user) {
 	users[user].bullets++;
 	bullets.push({
 		user: user,
-		'y': users[user].y + (-bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
-		'x': users[user].x + (-bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
-		'angle': users[user].angle,
-		'speed': bulletSpeed,
-		'radius': bulletRadius,
-		'color': users[user].color,
-		'time': 0
+		y: users[user].y + (-bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
+		x: users[user].x + (-bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
+		angle: users[user].angle,
+		speed: bulletSpeed,
+		radius: bulletRadius,
+		color: users[user].color,
+		time: 0
 	});
 }
 
 function createExplosion(user) {
-	explosions.push([{x: users[user].x, y: users[user].y, radius: 30, color: 'red'}]);
+	for (var i = 0; i < 15; i++) {
+		explosions.push({x: users[user].x + Math.random() * 20 - 10, y: users[user].y +  Math.random() * 20 - 10, dx: Math.random() * 10 - 5, dy: Math.random() * 10 - 5, radius: Math.random() * 15 + 5, color: '#ff' + getRandomColor().substr(1, 2) + '00'});
+	}
 }
 
 io.on('connection', function (socket) {
