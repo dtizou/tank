@@ -28,6 +28,9 @@ const c0 = 0.000001;
 setInterval(update, 25);
 
 function init(socket, username, color) {
+	if (!(/^#[0-9A-F]{6}$/i.test(color))) {
+		color = getRandomColor();
+	}
 	users[socket.id] = {
 		x: wallWidth + cellWidth / 2 + Math.floor(Math.random() * mazeDimensions[1]) * (wallWidth + cellWidth),
 		y: wallWidth + cellHeight / 2 + Math.floor(Math.random() * mazeDimensions[0]) * (wallWidth + cellHeight),
@@ -39,7 +42,6 @@ function init(socket, username, color) {
 		up: false,
 		down: false,
 		color: color,
-		randColor: getRandomColor(),
 		username: username,
 		bullets: 0
 	};

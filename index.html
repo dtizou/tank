@@ -124,10 +124,7 @@
 		for (var user in users) {
 			if (users.hasOwnProperty(user)) {
 				var w = users[user].width, h = users[user].height, cos = Math.cos(67.5 / 180 * Math.PI), sin = Math.sin(67.5 / 180 * Math.PI);
-				var mainColor = users[user].randColor, darkerColor = '#', n;
-				if (/^#[0-9A-F]{6}$/i.test(users[user].color)) {
-					mainColor = users[user].color;
-				}
+				var mainColor = users[user].color, darkerColor = '#', n;
 				for (var i = 0; i < 3; i++) {
 					n = parseInt(mainColor.substr(2 * i + 1, 2), 16) * 0.6;
 					n = Math.round(Math.min(Math.max(0, n), 255)).toString(16);
