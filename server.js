@@ -34,8 +34,8 @@ function init(socket, username, color) {
 	users[socket.id] = {
 		x: wallWidth + cellWidth / 2 + Math.floor(Math.random() * mazeDimensions[1]) * (wallWidth + cellWidth),
 		y: wallWidth + cellHeight / 2 + Math.floor(Math.random() * mazeDimensions[0]) * (wallWidth + cellHeight),
-		width: 30,
-		height: 40,
+		width: 36,
+		height: 48,
 		angle: 0,
 		left: false,
 		right: false,
@@ -49,7 +49,6 @@ function init(socket, username, color) {
 	drawMaze();
 	drawTanks();
 	drawBullets();
-	drawExplosions();
 }
 
 function getRandomColor() {
@@ -203,13 +202,13 @@ function destroyTanks() {
 			}
 		}
 		if (destroyTank) {
-			createExplosion(user);
+			drawExplosions(user);
 			delete users[user];
 		}
 	}
 }
 
-function updateExplosions() {
+/*function updateExplosions() {
 	for (var i = 0; i < explosions.length; i++) {
 		if (explosions[i].radius <= 1) {
 			explosions.splice(i, 1);
@@ -222,13 +221,12 @@ function updateExplosions() {
 		}
 	}
 	drawExplosions();
-}
+}*/
 
 function update() {
 	updateTanks();
 	updateBullets();
 	destroyTanks();
-	updateExplosions();
 }
 
 function drawTanks() {
@@ -239,8 +237,8 @@ function drawBullets() {
 	io.emit('drawBullets', bullets);
 }
 
-function drawExplosions() {
-	io.emit('drawExplosions', explosions);
+function drawExplosions(user) {
+	io.emit('drawExplosions', users[user].x, users[user].y);
 }
 
 function drawMaze() {
