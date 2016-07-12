@@ -16,9 +16,9 @@
 	<div>Username: <input id="username" autocomplete="off"/></div>
 	<div>Choose a Color</div>
 	<select id="colors">
-		<option value="red">red</option>
-		<option value="blue">blue</option>
-		<option value="green">green</option>
+		<option value="#ff0000">red</option>
+		<option value="#0000ff">blue</option>
+		<option value="#00ff00">green</option>
 
 	</select>
 	<br/>
@@ -123,9 +123,17 @@
 		tankCtx.beginPath();
 		for (var user in users) {
 			if (users.hasOwnProperty(user)) {
-				var w = users[user].width, h = users[user].height, cos = Math.cos(1.178), sin = Math.sin(1.178);
-				tankCtx.fillStyle = users[user].randColor;
-				tankCtx.fillStyle = users[user].color;
+				var w = users[user].width, h = users[user].height, cos = Math.cos(67.5 / 180 * Math.PI), sin = Math.sin(67.5 / 180 * Math.PI);
+				var mainColor = users[user].randColor, darkerColor = '#', n;
+				if (/^#[0-9A-F]{6}$/i.test(users[user].color)) {
+					mainColor = users[user].color;
+				}
+				for (var i = 0; i < 3; i++) {
+					n = parseInt(mainColor.substr(2 * i + 1, 2), 16) * 0.6;
+					n = Math.round(Math.min(Math.max(0, n), 255)).toString(16);
+					darkerColor += ('00' + n).substr(n.length);
+				}
+				tankCtx.fillStyle = mainColor;
 				tankCtx.translate(users[user].x, users[user].y);
 				tankCtx.rotate(users[user].angle);
 				tankCtx.fillRect(-h*0.4, -w*0.3, h*0.8, w*0.6);
@@ -134,10 +142,9 @@
 				tankCtx.strokeRect(-h*0.5, -w*0.5, h, w/5);
 				tankCtx.fillRect(-h*0.5, w*1.5/5, h, w/5);
 				tankCtx.strokeRect(-h*0.5, w*1.5/5, h, w/5);
-				tankCtx.fillStyle = '#990000';
+				tankCtx.fillStyle = darkerColor;
 				tankCtx.fillRect(0,-w/16, h*2/3, w /8);
 				tankCtx.strokeRect(0,-w/16, h*2/3, w/8);
-				tankCtx.fillStyle = '#990000';
 				tankCtx.beginPath();
 				tankCtx.moveTo(-sin*h/4*3/5, -cos*h/4*3/5);
 				tankCtx.lineTo(-sin*h/4*3/5, cos*h/4*3/5);
