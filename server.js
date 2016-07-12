@@ -186,13 +186,16 @@ function destroyTanks() {
 		for (var i = 0; i < bullets.length; i++) {
 			destroyBullet = false;
 			for (var j = 0; j < tlines.length; j++) {
-				if (distancePL([bullets[i].y, bullets[i].x], tlines[j][0], tlines[j][1]) <= bullets[i].radius && !(user == bullets[i].user && bullets[i].time <= 10)) {
+				if (distancePL([bullets[i].y, bullets[i].x], tlines[j][0], tlines[j][1]) <= bullets[i].radius && !(user == bullets[i].user && bullets[i].time <= 6)) {
 					destroyTank = true;
 					destroyBullet = true;
 					break;
 				}
 			}
 			if (destroyBullet) {
+				if (users.hasOwnProperty(bullets[i].user)) {
+					users[bullets[i].user].bullets--;
+				}
 				bullets.splice(i, 1);
 				i--;
 			}
@@ -517,6 +520,7 @@ function createBullet(user) {
 	if (users[user].bullets >= maxBullets) {
 		return;
 	}
+	users[user].bullets++;
 	bullets.push({
 		user: user,
 		'y': users[user].y + (-bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
