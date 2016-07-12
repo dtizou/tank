@@ -290,31 +290,31 @@ function isWall(y, x) {
 	}
 	if (y % 1 != 0) {
 		if (y > 0) {
-			return maze[y-0.5][x].bottom;
+			return maze[y - 0.5][x].bottom;
 		}
-		return maze[y+0.5][x].top;
+		return maze[y + 0.5][x].top;
 	}
 	else {
 		if (x > 0) {
-			return maze[y][x-0.5].right;
+			return maze[y][x - 0.5].right;
 		}
-		return maze[y][x+0.5].left;
+		return maze[y][x + 0.5].left;
 	}
 }
 
 // returns point for vertices of wall in order
 function wallPoints(y, x) {
 	if (y % 1 != 0) {
-		return [[(y+0.5) * (cellHeight + wallWidth), x * (cellWidth + wallWidth)],
-			[(y+0.5) * (cellHeight + wallWidth) + wallWidth, x * (cellWidth + wallWidth)],
-			[(y+0.5) * (cellHeight + wallWidth) + wallWidth, x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth],
-			[(y+0.5) * (cellHeight + wallWidth), x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth]];
+		return [[(y + 0.5) * (cellHeight + wallWidth), x * (cellWidth + wallWidth)],
+			[(y + 0.5) * (cellHeight + wallWidth) + wallWidth, x * (cellWidth + wallWidth)],
+			[(y + 0.5) * (cellHeight + wallWidth) + wallWidth, x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth],
+			[(y + 0.5) * (cellHeight + wallWidth), x * (cellWidth + wallWidth) + cellWidth + 2 * wallWidth]];
 	}
 	else {
-		return [[y * (cellHeight + wallWidth), (x+0.5) * (cellWidth + wallWidth)],
-			[y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth, (x+0.5) * (cellWidth + wallWidth)],
-			[y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth, (x+0.5) * (cellWidth + wallWidth) + wallWidth],
-			[y * (cellHeight + wallWidth), (x+0.5) * (cellWidth + wallWidth) + wallWidth]];
+		return [[y * (cellHeight + wallWidth), (x + 0.5) * (cellWidth + wallWidth)],
+			[y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth, (x + 0.5) * (cellWidth + wallWidth)],
+			[y * (cellHeight + wallWidth) + cellHeight + 2 * wallWidth, (x + 0.5) * (cellWidth + wallWidth) + wallWidth],
+			[y * (cellHeight + wallWidth), (x + 0.5) * (cellWidth + wallWidth) + wallWidth]];
 	}
 }
 
@@ -322,9 +322,9 @@ function wallPoints(y, x) {
 function convertToSeg(points) {
 	var segments = [];
 	for (var i = 0; i < points.length - 1; i++) {
-		segments.push([points[i], points[i+1]]);
+		segments.push([points[i], points[i + 1]]);
 	}
-	segments.push([points[points.length-1], points[0]]);
+	segments.push([points[points.length - 1], points[0]]);
 	return segments;
 }
 
@@ -353,7 +353,7 @@ function shiftPoints(segments, points, dy, dx) {
 
 	// given a wall, take every point on tank and line on wall and find minimum translation of point on tank such that the point is outside of the wall given direction [dy, dx]
 	for (var j = 0; j < points.length; j++) {
-		dist = [1000000*dy, 1000000*dx];
+		dist = [1000000 * dy, 1000000 * dx];
 		// given a point, find the minimum translation in given direction [dy, dx] for point to be outside of wall
 		for (var k = 0; k < segments.length; k++) {
 			point = lineIntersection(points[j], [points[j][0] + dy, points[j][1] + dx], segments[k][0], segments[k][1]);
@@ -517,13 +517,15 @@ function createBullet(user) {
 	if (users[user].bullets.length >= maxBullets) {
 		return;
 	}
-	users[user].bullets.push({'y': users[user].y + (-bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
+	users[user].bullets.push({
+		'y': users[user].y + (-bulletRadius + users[user].height / 2) * Math.sin(users[user].angle),
 		'x': users[user].x + (-bulletRadius + users[user].height / 2) * Math.cos(users[user].angle),
 		'angle': users[user].angle,
 		'speed': bulletSpeed,
 		'radius': bulletRadius,
 		'color': users[user].color,
-		'time': 0});
+		'time': 0
+	});
 }
 
 function createExplosion(user) {
@@ -582,7 +584,7 @@ io.on('connection', function (socket) {
 		}
 	});
 
-	socket.on('shoot', function() {
+	socket.on('shoot', function () {
 		if (users.hasOwnProperty(socket.id)) {
 			createBullet(socket.id);
 		}
