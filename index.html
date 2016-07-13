@@ -79,23 +79,15 @@
 
 	var particles = [];
 
-	/*
-	 * Advanced Explosion effect
-	 * Each particle has a different size, move speed and scale speed.
-	 *
-	 * Parameters:
-	 * 	x, y - explosion center
-	 * 	color - particles' color
-	 */
-	function createExplosion(x, y, color)
+
+	function createExplosion(x, y, minSize, maxSize)
 	{
-		var minSize = 10;
-		var maxSize = 30;
-		var count = 10;
+		var count = 20;
 		var minSpeed = 60.0;
 		var maxSpeed = 200.0;
 		var minScaleSpeed = 1.0;
 		var maxScaleSpeed = 4.0;
+		var chars = '0123456789abcdef';
 
 		for (var angle=0; angle<360; angle += Math.round(360/count))
 		{
@@ -106,7 +98,7 @@
 
 			particle.radius = randomFloat(minSize, maxSize);
 
-			particle.color = color;
+			particle.color = '#ff' + chars[Math.floor(Math.random() * 16)] + chars[Math.floor(Math.random() * 16)] + '00';
 
 			particle.scaleSpeed = randomFloat(minScaleSpeed, maxScaleSpeed);
 
@@ -374,12 +366,11 @@
 			explosionCtx.closePath();
 		}
 	});*/
-	socket.on('drawExplosions', function (x, y){
+	socket.on('drawExplosions', function (x, y, minSize, maxSize){
 		//var x = users[user].x;
 		//var y = users[user].y;
 
-		createExplosion(x, y, "#525252");
-		createExplosion(x, y, "#FFA318");
+		createExplosion(x, y, minSize, maxSize);
 		var frameRate = 60.0;
 		var frameDelay = 1000.0/frameRate;
 

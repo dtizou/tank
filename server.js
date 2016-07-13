@@ -34,8 +34,8 @@ function init(socket, username, color) {
 	users[socket.id] = {
 		x: wallWidth + cellWidth / 2 + Math.floor(Math.random() * mazeDimensions[1]) * (wallWidth + cellWidth),
 		y: wallWidth + cellHeight / 2 + Math.floor(Math.random() * mazeDimensions[0]) * (wallWidth + cellHeight),
-		width: 36,
-		height: 48,
+		width: 30,
+		height: 40,
 		angle: 0,
 		left: false,
 		right: false,
@@ -49,6 +49,7 @@ function init(socket, username, color) {
 	drawMaze();
 	drawTanks();
 	drawBullets();
+	//drawExplosions();
 }
 
 function getRandomColor() {
@@ -150,6 +151,8 @@ function updateBullets() {
 			if (users.hasOwnProperty(bullets[i].user)) {
 				users[bullets[i].user].bullets--;
 			}
+			//createExplosion(bullets[i].x, bullets[i].y, 5);
+			drawExplosions(bullets[i].x, bullets[i].y, 1, 5);
 			bullets.splice(i, 1);
 			i--;
 		}
@@ -197,18 +200,21 @@ function destroyTanks() {
 				if (users.hasOwnProperty(bullets[i].user)) {
 					users[bullets[i].user].bullets--;
 				}
+				//createExplosion(bullets[i].x, bullets[i].y, 5);
+				drawExplosions(bullets[i].x, bullets[i].y, 1, 5);
 				bullets.splice(i, 1);
 				i--;
 			}
 		}
 		if (destroyTank) {
-			drawExplosions(user);
+			//createExplosion(users[user].x, users[user].y, 20);
+			drawExplosions(users[user].x, users[user].y, 10, 30);
 			delete users[user];
 		}
 	}
 }
 
-/*function updateExplosions() {
+function updateExplosions() {
 	for (var i = 0; i < explosions.length; i++) {
 		if (explosions[i].radius <= 1) {
 			explosions.splice(i, 1);
@@ -221,12 +227,13 @@ function destroyTanks() {
 		}
 	}
 	drawExplosions();
-}*/
+}
 
 function update() {
 	updateTanks();
 	updateBullets();
 	destroyTanks();
+	//updateExplosions();
 }
 
 function drawTanks() {
@@ -237,8 +244,9 @@ function drawBullets() {
 	io.emit('drawBullets', bullets);
 }
 
-function drawExplosions(user) {
-	io.emit('drawExplosions', users[user].x, users[user].y);
+function drawExplosions(x, y, minSize, maxSize) {
+	//io.emit('drawExplosions', explosions);
+	io.emit('drawExplosions', x, y, minSize, maxSize);
 }
 
 function drawMaze() {
@@ -529,9 +537,9 @@ function createBullet(user) {
 	});
 }
 
-function createExplosion(user) {
+function createExplosion(x, y, radius) {
 	for (var i = 0; i < 15; i++) {
-		explosions.push({x: users[user].x + Math.random() * 20 - 10, y: users[user].y +  Math.random() * 20 - 10, dx: Math.random() * 10 - 5, dy: Math.random() * 10 - 5, radius: Math.random() * 15 + 5, color: '#ff' + getRandomColor().substr(1, 2) + '00'});
+		explosions.push({x: x + Math.random() * 20 - 10, y: y +  Math.random() * 20 - 10, dx: Math.random() * 10 - 5, dy: Math.random() * 10 - 5, radius: Math.random() * radius, color: '#ff' + getRandomColor().substr(1, 2) + '00'});
 	}
 }
 
