@@ -367,8 +367,9 @@
 		}
 	});*/
 	socket.on('drawExplosions', function (x, y, minSize, maxSize){
-		//var x = users[user].x;
-		//var y = users[user].y;
+		if (!isInit) {
+			return;
+		}
 
 		createExplosion(x, y, minSize, maxSize);
 		var frameRate = 60.0;
